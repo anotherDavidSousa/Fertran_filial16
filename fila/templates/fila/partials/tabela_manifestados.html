@@ -1,0 +1,50 @@
+{% load static %}
+{% load fila_filters %}
+<div class="manifestados-table-wrap">
+    <table class="manifestados-table">
+        <thead>
+            <tr>
+                <th class="col-num">#</th>
+                <th class="col-remetente">Remetente</th>
+                <th class="col-destinatario">Destinatário</th>
+                <th class="col-nf">Nota fiscal</th>
+                <th class="col-data">Data</th>
+                <th class="col-peso">Peso</th>
+                <th class="col-material">Material</th>
+                <th class="col-fluxo">Fluxo</th>
+                <th class="col-cte">CTE / OST</th>
+                <th class="col-motorista">Motorista</th>
+                <th class="col-placa">Placa</th>
+                <th class="col-acoes">PDF</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr data-item-id="{{ item.pk }}">
+                <td class="col-num">{{ forloop.counter }}</td>
+                <td class="col-remetente" title="{{ item.emit_nome|default:'' }}">{{ item.emit_nome|default:"—"|truncatechars:35 }}</td>
+                <td class="col-destinatario" title="{{ item.dest_nome|default:'' }}">{{ item.dest_nome|default:"—"|truncatechars:35 }}</td>
+                <td class="col-nf">{{ item.nota_fiscal|default:"—" }}</td>
+                <td class="col-data">{% if item.datahora_emissao %}{{ item.datahora_emissao|date:"d/m/Y H:i" }}{% else %}{{ item.criado_em|date:"d/m/Y H:i" }}{% endif %}</td>
+                <td class="col-peso">{{ item.qCom_peso|peso_format }}</td>
+                <td class="col-material" title="{{ item.xProd_produto|default:'' }}">{{ item.xProd_produto|default:"—"|truncatechars:30 }}</td>
+                <td class="col-fluxo">{{ item.fluxo|default:"—" }}</td>
+                <td class="col-cte">{{ item.get_cte_ost_display|default:"—" }}</td>
+                <td class="col-motorista">{{ item.extras|get_extra:"Motorista"|default:"—"|truncatechars:20 }}</td>
+                <td class="col-placa">{{ item.extras|get_extra:"Placa"|default:"—" }}</td>
+                <td class="col-acoes">
+                    {% if item.ost and item.ost.pdf_storage_key %}
+                    <a href="{% url 'download_ost_pdf' item.pk %}?inline=1" class="btn-download-pdf" target="_blank" rel="noopener noreferrer" title="Abrir PDF em nova aba para visualizar ou imprimir">📄 PDF</a>
+                    {% else %}
+                    <span class="no-pdf">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="12" class="empty-cell">Nenhum item manifestado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

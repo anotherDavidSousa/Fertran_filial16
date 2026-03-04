@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Carretas - Agregamento{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
+<style>
+.core-table-wrap tbody tr.carreta-parado { background: rgba(220, 53, 69, 0.15); }
+.core-table-wrap tbody tr.carreta-parado:hover { background: rgba(220, 53, 69, 0.25); }
+
+/* Tabela compacta */
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tbody th,
+table.dataTable tbody td {
+  padding: 5px 10px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+}
+.core-table-wrap .badge-core {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+}
+.core-table-wrap .btn-core {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Carretas</h1>
+  <p class="description">Lista de carretas cadastradas.</p>
+</div>
+<div class="cards-row">
+  <div class="card-summary"><div class="label">Total (Agregamento)</div><div class="value">{{ contador_total_agregamento }}</div></div>
+  <div class="card-summary"><div class="label">Disponíveis</div><div class="value">{{ contador_disponiveis_agregamento }}</div></div>
+  <div class="card-summary"><div class="label">Paradas</div><div class="value">{{ contador_paradas_agregamento }}</div></div>
+</div>
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <form method="get" class="core-filters">
+    <div>
+      <label for="disponivel">Disponibilidade</label>
+      <select id="disponivel" name="disponivel">
+        <option value="">Todas</option>
+        <option value="sim" {% if disponivel_filter == 'sim' %}selected{% endif %}>Disponíveis</option>
+        <option value="nao" {% if disponivel_filter == 'nao' %}selected{% endif %}>Acopladas</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-core btn-core-primary">Filtrar</button>
+    <a href="{% url 'core:carreta_list' %}" class="btn-core btn-core-secondary">Limpar</a>
+  </form>
+</div>
+<div class="core-table-wrap">
+  <table id="tabelaCarretas" class="core-table" style="width:100%">
+    <thead>
+      <tr>
+        <th>Placa</th>
+        <th>Marca</th>
+        <th>Ano</th>
+        <th>Tipo</th>
+        <th>Cavalo</th>
+        <th>Situação</th>
+        <th>Última Lavagem</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for carreta in carretas %}
+      <tr class="{% if carreta.situacao == 'parado' %}carreta-parado{% endif %}">
+        <td><a href="{% url 'core:carreta_detail' carreta.pk %}">{{ carreta.placa|default:"-" }}</a></td>
+        <td>{{ carreta.marca|default:"-" }}</td>
+        <td>{{ carreta.ano|default:"-" }}</td>
+        <td>{% if carreta.tipo %}<span class="badge-core badge-core-info">{{ carreta.get_tipo_display }}</span>{% else %}-{% endif %}</td>
+        <td>{% with cavalo=carreta.get_cavalo %}{% if cavalo %}<a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa }}</a>{% else %}<span class="badge-core badge-core-success">Disponível</span>{% endif %}{% endwith %}</td>
+        <td>{% if carreta.situacao == 'ativo' %}<span class="badge-core badge-core-success">Ativo</span>{% elif carreta.situacao == 'parado' %}<span class="badge-core badge-core-warning">Parado</span>{% else %}-{% endif %}</td>
+        <td>{% if carreta.ultima_lavagem %}{{ carreta.ultima_lavagem|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+        <td><a href="{% url 'core:carreta_detail' carreta.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:carreta_edit' carreta.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);">Nenhuma carreta.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){ $('#tabelaCarretas').DataTable({ language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json' }, pageLength: 25 }); });
+</script>
+{% endblock %}

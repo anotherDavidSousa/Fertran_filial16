@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Fila de carregamento{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>Fila de carregamento</h1>
+    <p class="description">Plataforma para gerenciar fluxos de e-mails de carregamento integrados ao Power Automate e n8n.</p>
+    <p class="process-info">Quando chegam e-mails com XML ou XML + PDF, eles são enviados para um webhook no n8n que trata as informações, define o fluxo do carregamento e armazena os arquivos em base64.</p>
+</div>
+
+<div class="cards-row">
+    <div class="card-summary card-total">
+        <span class="label">Total em fila</span>
+        <span class="value">{{ card_total_fila }}</span>
+    </div>
+    {% for fluxo in fluxos %}
+    <div class="card-summary">
+        <span class="label">{{ fluxo.nome|upper }}</span>
+        <span class="value">{{ fluxo.total }}</span>
+    </div>
+    {% endfor %}
+    <div class="card-summary card-archived">
+        <span class="label">Manifestados</span>
+        <span class="value">{{ card_manifestados }}</span>
+    </div>
+</div>
+
+<div class="tabs-flow">
+    {% for fluxo in fluxos %}
+    <a href="{% url 'fila_fluxo' fluxo.slug %}" class="tab-flow {% if fluxo.nome == fluxo_ativo %}active{% endif %}">
+        {{ fluxo.nome }}
+        <span class="badge">{{ fluxo.total }}</span>
+    </a>
+    {% empty %}
+    <span class="tab-flow active">Todos</span>
+    {% endfor %}
+</div>
+
+<div id="fila-cards-wrapper" data-fluxo="{{ fluxo_slug_ativo }}">
+    {% include "fila/partials/fila_cards.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var wrapper = document.getElementById('fila-cards-wrapper');
+  if (!wrapper) return;
+  var fluxo = wrapper.getAttribute('data-fluxo') || 'todos';
+  var partialUrl = fluxo === 'todos' ? '{% url "fila" %}' : '/fila/' + fluxo + '/';
+  partialUrl = partialUrl + (partialUrl.indexOf('?') >= 0 ? '&' : '?') + 'partial=1';
+
+  function getCookie(name) {
+    var v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+  }
+
+  function refreshFila() {
+    fetch(partialUrl)
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var div = document.createElement('div');
+        div.innerHTML = html;
+        var newCards = div.querySelector('#fila-cards');
+        if (newCards && wrapper) {
+          wrapper.innerHTML = newCards.outerHTML;
+          bindManifestar();
+        }
+      })
+      .catch(function() {});
+  }
+
+  function bindManifestar() {
+    if (!wrapper) return;
+    wrapper.querySelectorAll('.btn-manifestar').forEach(function(btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.addEventListener('click', function() {
+        var pk = this.getAttribute('data-pk');
+        if (!pk) return;
+        var card = wrapper.querySelector('[data-item-id="' + pk + '"]');
+        var formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+        fetch('/item/' + pk + '/manifestar/', {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          credentials: 'same-origin'
+        }).then(function(r) {
+          return r.json();
+        }).then(function(data) {
+          if (data && data.ok) window.location.reload();
+          else refreshFila();
+        }).catch(function() { refreshFila(); });
+      });
+    });
+  }
+
+  bindManifestar();
+  setInterval(refreshFila, 15000);
+})();
+</script>
+{% endblock %}

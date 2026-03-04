@@ -1,0 +1,79 @@
+/* Agregamento - tema Filial16 (variáveis CSS) */
+
+/* Formulários */
+.core-form .form-group { margin-bottom: 1rem; }
+.core-form label { display: block; font-weight: 600; margin-bottom: 0.35rem; color: var(--text-primary); }
+.core-form input[type="text"],
+.core-form input[type="number"],
+.core-form input[type="date"],
+.core-form input[type="file"],
+.core-form select,
+.core-form textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+}
+.core-form textarea { min-height: 100px; resize: vertical; }
+.core-form input:focus,
+.core-form select:focus,
+.core-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+.core-form .form-text { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.core-form .form-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.25rem; }
+
+/* Botões alinhados ao tema */
+.btn-core { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; font: inherit; }
+.btn-core-primary { background: var(--accent); color: #fff; }
+.btn-core-primary:hover { background: var(--accent-hover); color: #fff; text-decoration: none; }
+.btn-core-secondary { background: var(--border); color: var(--text-primary); }
+.btn-core-secondary:hover { background: var(--text-secondary); color: var(--bg-card); text-decoration: none; }
+
+/* Tabelas e DataTables - tema Filial16 */
+.core-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+.core-table-wrap .dataTables_wrapper { padding: 1rem; color: var(--text-primary); }
+.core-table-wrap table.dataTable { width: 100% !important; border-collapse: collapse; }
+.core-table-wrap table.dataTable thead th { background: var(--bg-header); color: var(--text-on-header); padding: 0.25rem 0.5rem; text-align: left; font-weight: 600; border: none; font-size: 0.75rem; }
+.core-table-wrap table.dataTable tbody td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-size: 0.75rem; }
+.core-table-wrap table.dataTable tbody tr:hover { background: var(--accent-muted); }
+.core-table-wrap .dataTables_filter input { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); border-radius: 6px; padding: 0.4rem 0.6rem; }
+.core-table-wrap .dataTables_length select { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); border-radius: 6px; padding: 0.25rem 0.5rem; }
+.core-table-wrap .dataTables_info,
+.core-table-wrap .dataTables_paginate { color: var(--text-secondary); font-size: 0.9rem; }
+.core-table-wrap .dataTables_paginate .paginate_button { background: var(--border) !important; color: var(--text-primary) !important; border: none !important; border-radius: 6px !important; margin: 0 2px; padding: 0.35rem 0.75rem !important; }
+.core-table-wrap .dataTables_paginate .paginate_button:hover { background: var(--accent-muted) !important; color: var(--accent) !important; }
+.core-table-wrap .dataTables_paginate .paginate_button.current { background: var(--accent) !important; color: #fff !important; }
+.core-table-wrap .dataTables_paginate .paginate_button.disabled { opacity: 0.5; cursor: default; }
+
+/* Tabela simples (sem DataTables) */
+.core-table { width: 100%; border-collapse: collapse; }
+.core-table thead th { background: var(--bg-header); color: var(--text-on-header); padding: 0.25rem 0.5rem; text-align: left; font-weight: 600; font-size: 0.75rem; }
+.core-table tbody td { padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+.core-table tbody tr:hover { background: var(--accent-muted); }
+
+/* Badges */
+.badge-core { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.badge-core-success { background: rgba(5, 150, 105, 0.2); color: var(--success); }
+.badge-core-warning { background: var(--accent-muted); color: var(--accent); }
+.badge-core-info { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.badge-core-muted { background: var(--border); color: var(--text-secondary); }
+
+/* Filtros em linha */
+.core-filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.core-filters label { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+.core-filters input,
+.core-filters select { padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); }
+
+/* Paginação simples */
+.pagination-core { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+.pagination-core a,
+.pagination-core span { padding: 0.4rem 0.75rem; border-radius: 6px; background: var(--border); color: var(--text-primary); text-decoration: none; font-size: 0.9rem; }
+.pagination-core a:hover { background: var(--accent-muted); color: var(--accent); }
+.pagination-core .disabled { opacity: 0.6; cursor: not-allowed; }

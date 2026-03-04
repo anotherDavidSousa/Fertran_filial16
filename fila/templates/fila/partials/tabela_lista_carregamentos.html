@@ -1,0 +1,47 @@
+{% load static %}
+<table id="tabelaListaCarregamentos" class="core-table" style="width:100%">
+    <thead>
+        <tr>
+            <th class="col-num">#</th>
+            <th class="col-doc">Documento</th>
+            <th class="col-data">Data manifesto</th>
+            <th class="col-remetente">Remetente</th>
+            <th class="col-destinatario">Destinatário</th>
+            <th class="col-nf">Nota fiscal</th>
+            <th class="col-motorista">Motorista</th>
+            <th class="col-placa-cavalo">Placa cavalo</th>
+            <th class="col-placa-carreta">Placa carreta</th>
+            <th class="col-material">Produto</th>
+            <th class="col-peso">Peso</th>
+            <th class="col-acoes">PDF</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in itens %}
+        <tr data-ost-id="{{ item.pk }}">
+            <td class="col-num">{{ forloop.counter }}</td>
+            <td class="col-doc">{{ item.filial|default:"" }}/{{ item.serie|default:"OST" }}/{{ item.documento|default:"" }}</td>
+            <td class="col-data">{% if item.data_manifesto %}{{ item.data_manifesto|date:"d/m/Y" }}{% if item.hora_manifesto %} {{ item.hora_manifesto|time:"H:i" }}{% endif %}{% else %}{{ item.criado_em|date:"d/m/Y H:i" }}{% endif %}</td>
+            <td class="col-remetente cell-truncate" title="{{ item.remetente|default:'' }}">{{ item.remetente|default:"—"|truncatechars:35 }}</td>
+            <td class="col-destinatario cell-truncate" title="{{ item.destinatario|default:'' }}">{{ item.destinatario|default:"—"|truncatechars:35 }}</td>
+            <td class="col-nf cell-truncate" title="{% if item.nota_fiscal %}{{ item.nota_fiscal|join:', ' }}{% endif %}">{% if item.nota_fiscal %}{{ item.nota_fiscal|join:", "|truncatechars:25 }}{% else %}—{% endif %}</td>
+            <td class="col-motorista cell-truncate" title="{{ item.motorista|default:'' }}">{{ item.motorista|default:"—"|truncatechars:20 }}</td>
+            <td class="col-placa-cavalo">{{ item.placa_cavalo|default:"—" }}</td>
+            <td class="col-placa-carreta">{{ item.placa_carreta|default:"—" }}</td>
+            <td class="col-material cell-truncate" title="{{ item.produto|default:'' }}">{{ item.produto|default:"—"|truncatechars:40 }}</td>
+            <td class="col-peso">{{ item.peso|default:"—" }}</td>
+            <td class="col-acoes">
+                {% if item.pdf_storage_key %}
+                <a href="{% url 'ost_download_pdf' item.pk %}?inline=1" class="btn-core btn-core-primary btn-download-pdf" target="_blank" rel="noopener noreferrer" title="Abrir PDF">PDF</a>
+                {% else %}
+                <span class="no-pdf">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="12" style="text-align:center;color:var(--text-secondary);">Nenhuma OST processada.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Motorista - {{ motorista.nome|default:"Sem nome" }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{{ motorista.nome|default:"Motorista" }}</h1>
+  <p class="description">Detalhes do motorista.</p>
+</div>
+<div class="form-actions" style="margin-bottom:1rem;">
+  <a href="{% url 'core:motorista_edit' motorista.pk %}" class="btn-core btn-core-primary">Editar</a>
+  <a href="{% url 'core:motorista_list' %}" class="btn-core btn-core-secondary">Voltar</a>
+</div>
+{% if motorista.foto %}
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <div class="panel-title">Foto</div>
+  <p><img src="{{ motorista.foto.url }}" alt="Foto {{ motorista.nome }}" style="max-height:220px;object-fit:contain;border-radius:8px;"></p>
+</div>
+{% endif %}
+<div class="panel-detail">
+  <div class="panel-title">Informações</div>
+  <p class="card-line"><span class="card-field">Nome:</span> {{ motorista.nome|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">CPF:</span> {{ motorista.cpf|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">WhatsApp:</span> {% if motorista.whatsapp %}<a href="https://wa.me/55{{ motorista.whatsapp|cut:' '|cut:'('|cut:')'|cut:'-'|cut:'.' }}" target="_blank" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;">{{ motorista.whatsapp }}</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Cavalo:</span> {% if motorista.cavalo %}<a href="{% url 'core:cavalo_detail' motorista.cavalo.pk %}"><span class="badge-core badge-core-info">{{ motorista.cavalo.placa|default:"-" }}</span></a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Carreta:</span> {% if motorista.cavalo and motorista.cavalo.carreta %}<a href="{% url 'core:carreta_detail' motorista.cavalo.carreta.pk %}">{{ motorista.cavalo.carreta.placa }}</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Tipo do cavalo:</span> {% if motorista.cavalo and motorista.cavalo.tipo %}{{ motorista.cavalo.get_tipo_display }}{% else %}-{% endif %}</p>
+</div>
+{% if motorista.documento %}
+<div class="panel-detail">
+  <div class="panel-title">Documento</div>
+  <a href="{{ motorista.documento.url }}" target="_blank" class="btn-core btn-core-primary">Baixar documento</a>
+</div>
+{% endif %}
+{% endblock %}

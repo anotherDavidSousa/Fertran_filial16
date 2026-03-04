@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fila carregamento{% endblock %} | Filial 16</title>
+    <link rel="stylesheet" href="{% static 'fila/css/theme.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="layout-with-sidebar">
+    <aside class="sidebar">
+        <a href="{% url 'home' %}" class="logo">
+            <span class="logo-icon">FC</span>
+            <span class="logo-text">Filial 16</span>
+        </a>
+        <nav class="sidebar-nav">
+            <div class="nav-item-row nav-item-row-home">
+                {% if can_see_home %}<a href="{% url 'home' %}" class="nav-item">Home</a>{% endif %}
+                <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema (claro/escuro)">
+                    <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
+                    <span class="theme-icon theme-icon-moon" aria-hidden="true">🌙</span>
+                </button>
+            </div>
+            {% if can_see_fila %}
+            <div class="nav-group nav-group-fila" id="nav-group-fila">
+                <button type="button" class="nav-group-toggle nav-group-toggle-destaque" aria-expanded="true" aria-controls="nav-group-fila-sub" id="nav-group-fila-btn">
+                    <span class="nav-group-title">Fila de carregamento</span>
+                    <span class="nav-group-chevron" aria-hidden="true">▼</span>
+                </button>
+                <div class="nav-group-sub" id="nav-group-fila-sub" role="region" aria-labelledby="nav-group-fila-btn">
+                    <a href="{% url 'fila' %}" class="nav-item nav-sub">Fila <span class="nav-badge" aria-label="{{ total_fila }} notas na fila">{{ total_fila }}</span></a>
+                    <a href="{% url 'lista_carregamentos' %}" class="nav-item nav-sub">Lista de Carregamentos</a>
+                </div>
+            </div>
+            {% endif %}
+            {% if can_see_cavalos or can_see_agregamento %}
+            <div class="nav-group nav-group-veiculos" id="nav-group-veiculos">
+                <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-veiculos-sub" id="nav-group-veiculos-btn">
+                    <span class="nav-group-title">Lista de Veículos</span>
+                    <span class="nav-group-chevron" aria-hidden="true">▼</span>
+                </button>
+                <div class="nav-group-sub" id="nav-group-veiculos-sub" role="region" aria-labelledby="nav-group-veiculos-btn">
+                    {% if can_see_cavalos %}
+                    <div class="nav-sub-row">
+                        <a href="{% url 'core:cavalo_list' %}" class="nav-item nav-sub">Cavalos</a>
+                        <a href="{% url 'core:cavalo_create' %}" class="nav-item nav-add" title="Novo cavalo" data-popup="{% url 'core:cavalo_create' %}">+</a>
+                    </div>
+                    {% endif %}
+                    {% if can_see_agregamento %}
+                    <div class="nav-sub-row">
+                        <a href="{% url 'core:carreta_list' %}" class="nav-item nav-sub">Carretas</a>
+                        <a href="{% url 'core:carreta_create' %}" class="nav-item nav-add" title="Nova carreta" data-popup="{% url 'core:carreta_create' %}">+</a>
+                    </div>
+                    <div class="nav-sub-row">
+                        <a href="{% url 'core:motorista_list' %}" class="nav-item nav-sub">Motoristas</a>
+                        <a href="{% url 'core:motorista_create' %}" class="nav-item nav-add" title="Novo motorista" data-popup="{% url 'core:motorista_create' %}">+</a>
+                    </div>
+                    <div class="nav-sub-row">
+                        <a href="{% url 'core:proprietario_list' %}" class="nav-item nav-sub">Proprietários</a>
+                        <a href="{% url 'core:proprietario_create' %}" class="nav-item nav-add" title="Novo proprietário" data-popup="{% url 'core:proprietario_create' %}">+</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if can_see_processador or can_see_agregamento %}
+            <div class="nav-group nav-group-ferramentas" id="nav-group-ferramentas">
+                <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-ferramentas-sub" id="nav-group-ferramentas-btn">
+                    <span class="nav-group-title">Ferramentas</span>
+                    <span class="nav-group-chevron" aria-hidden="true">▼</span>
+                </button>
+                <div class="nav-group-sub" id="nav-group-ferramentas-sub" role="region" aria-labelledby="nav-group-ferramentas-btn">
+                    {% if can_see_agregamento %}<a href="{% url 'core:index' %}" class="nav-item nav-sub">Dashboard</a>{% endif %}
+                    {% if can_see_processador %}<a href="{% url 'processador' %}" class="nav-item nav-sub">Processador de PDFs</a>{% endif %}
+                    {% if can_see_agregamento %}<a href="{% url 'core:log_list' %}" class="nav-item nav-sub">Logs</a>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+            <a href="{% url 'logout' %}" class="nav-item nav-logout">Sair</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{% static 'fila/js/theme.js' %}"></script>
+    <script src="{% static 'fila/js/sidebar.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

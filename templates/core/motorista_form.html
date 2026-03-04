@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if form_type == 'create' %}Novo Motorista{% else %}Editar Motorista{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{% if form_type == 'create' %}Novo Motorista{% else %}Editar Motorista{% endif %}</h1>
+  <p class="description">Preencha os dados do motorista.</p>
+</div>
+<div class="panel-detail">
+  <form method="post" enctype="multipart/form-data" class="core-form">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="nome">Nome</label>
+      <input type="text" id="nome" name="nome" value="{% if motorista %}{{ motorista.nome }}{% endif %}" required>
+    </div>
+    <div class="form-group">
+      <label for="cpf">CPF</label>
+      <input type="text" id="cpf" name="cpf" value="{% if motorista %}{{ motorista.cpf }}{% endif %}" placeholder="000.000.000-00">
+    </div>
+    <div class="form-group">
+      <label for="whatsapp">WhatsApp</label>
+      <input type="text" id="whatsapp" name="whatsapp" value="{% if motorista %}{{ motorista.whatsapp }}{% endif %}" placeholder="(00) 00000-0000">
+    </div>
+    <div class="form-group">
+      <label for="cavalo">Cavalo</label>
+      <select id="cavalo" name="cavalo">
+        <option value="">Nenhum</option>
+        {% for cavalo in cavalos %}
+        <option value="{{ cavalo.pk }}" {% if motorista and motorista.cavalo and motorista.cavalo.pk == cavalo.pk %}selected{% endif %}>
+          {{ cavalo.placa|default:"Sem placa" }}{% if cavalo.motorista and motorista and cavalo.motorista.pk != motorista.pk %} ({{ cavalo.motorista.nome }}){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <span class="form-text">Se atribuir a outro cavalo, será removido do atual.</span>
+    </div>
+    <div class="form-group">
+      <label for="foto">Foto</label>
+      <input type="file" id="foto" name="foto" accept="image/*">
+      {% if motorista and motorista.foto %}<span class="form-text">Atual: <a href="{{ motorista.foto.url }}" target="_blank">Ver foto</a></span>{% endif %}
+    </div>
+    <div class="form-group">
+      <label for="documento">Documento</label>
+      <input type="file" id="documento" name="documento">
+      {% if motorista and motorista.documento %}<span class="form-text">Atual: <a href="{{ motorista.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-core btn-core-primary">Salvar</button>
+      <a href="{% if motorista %}{% url 'core:motorista_detail' motorista.pk %}{% else %}{% url 'core:motorista_list' %}{% endif %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

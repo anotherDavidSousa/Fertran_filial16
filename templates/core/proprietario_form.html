@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if form_type == 'create' %}Novo Proprietário{% else %}Editar Proprietário{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{% if form_type == 'create' %}Novo Proprietário{% else %}Editar Proprietário{% endif %}</h1>
+  <p class="description">Preencha os dados do proprietário/parceiro.</p>
+</div>
+<div class="panel-detail">
+  <form method="post" enctype="multipart/form-data" class="core-form">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="codigo">Código</label>
+      <input type="text" id="codigo" name="codigo" value="{% if proprietario %}{{ proprietario.codigo }}{% endif %}" placeholder="Código único">
+    </div>
+    <div class="form-group">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Selecione...</option>
+        <option value="PF" {% if proprietario and proprietario.tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
+        <option value="PJ" {% if proprietario and proprietario.tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="nome_razao_social">Nome/Razão Social</label>
+      <input type="text" id="nome_razao_social" name="nome_razao_social" value="{% if proprietario %}{{ proprietario.nome_razao_social }}{% endif %}" placeholder="Nome ou razão social">
+    </div>
+    <div class="form-group">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="sim" {% if not proprietario or proprietario.status == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if proprietario and proprietario.status == 'nao' %}selected{% endif %}>Não</option>
+      </select>
+      <span class="form-text">Atualizado automaticamente conforme cavalos com carreta.</span>
+    </div>
+    <div class="form-group">
+      <label for="whatsapp">WhatsApp</label>
+      <input type="text" id="whatsapp" name="whatsapp" value="{% if proprietario %}{{ proprietario.whatsapp }}{% endif %}" placeholder="(11) 99999-9999">
+    </div>
+    <div class="form-group">
+      <label for="documento">Documento</label>
+      <input type="file" id="documento" name="documento">
+      {% if proprietario and proprietario.documento %}<span class="form-text">Atual: <a href="{{ proprietario.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+    </div>
+    <div class="form-group">
+      <label for="observacoes">Observações</label>
+      <textarea id="observacoes" name="observacoes" rows="4">{% if proprietario %}{{ proprietario.observacoes }}{% endif %}</textarea>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-core btn-core-primary">Salvar</button>
+      <a href="{% if proprietario %}{% url 'core:proprietario_detail' proprietario.pk %}{% else %}{% url 'core:proprietario_list' %}{% endif %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

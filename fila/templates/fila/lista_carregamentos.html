@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lista de Carregamentos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
+<style>
+.page-hero-lista-carregamentos { margin-bottom: 1rem; }
+.card-filtrado .value { color: var(--primary, #2563eb); }
+
+/* Tabela compacta igual cavalo_list */
+.core-table-wrap table.dataTable thead th,
+.core-table-wrap table.dataTable thead td,
+.core-table-wrap table.dataTable tbody th,
+.core-table-wrap table.dataTable tbody td {
+  padding: 5px 10px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+}
+.core-table-wrap .btn-download-pdf {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+}
+
+/* Colunas com largura e truncamento */
+#tabelaListaCarregamentos .col-num { width: 2.5rem; }
+#tabelaListaCarregamentos .col-doc { width: 120px; min-width: 100px; }
+#tabelaListaCarregamentos .col-data { width: 95px; white-space: nowrap; }
+#tabelaListaCarregamentos .col-remetente { max-width: 160px; }
+#tabelaListaCarregamentos .col-destinatario { max-width: 160px; }
+#tabelaListaCarregamentos .col-nf { max-width: 100px; }
+#tabelaListaCarregamentos .col-motorista { max-width: 120px; }
+#tabelaListaCarregamentos .col-placa-cavalo { width: 90px; }
+#tabelaListaCarregamentos .col-placa-carreta { width: 90px; }
+#tabelaListaCarregamentos .col-material { max-width: 180px; }
+#tabelaListaCarregamentos .col-peso { width: 80px; }
+#tabelaListaCarregamentos .col-acoes { width: 70px; white-space: nowrap; }
+
+#tabelaListaCarregamentos .cell-truncate {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#tabelaListaCarregamentos .no-pdf { color: var(--text-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-hero page-hero-lista-carregamentos">
+    <h1>Lista de Carregamentos</h1>
+    <p class="description">OSTs processadas (extraídas do processador de PDFs).</p>
+</div>
+
+<div class="cards-row manifestados-cards-row">
+    <div class="card-summary card-archived">
+        <span class="label">Total OSTs</span>
+        <span class="value">{{ total_osts }}</span>
+    </div>
+    <div class="card-summary card-filtrado">
+        <span class="label">Exibindo</span>
+        <span class="value">{{ total_filtrado }}</span>
+    </div>
+</div>
+
+<div class="panel-detail" style="margin-bottom: 1rem;">
+    <div class="panel-title">Filtros</div>
+    <form method="get" action="{% url 'lista_carregamentos' %}" class="core-filters">
+        <div>
+            <label for="id_data_inicio">Período (de)</label>
+            <input type="date" id="id_data_inicio" name="data_inicio" value="{{ filtros.data_inicio }}">
+        </div>
+        <div>
+            <label for="id_data_fim">Até</label>
+            <input type="date" id="id_data_fim" name="data_fim" value="{{ filtros.data_fim }}">
+        </div>
+        <div>
+            <label for="id_remetente">Remetente</label>
+            <input type="text" id="id_remetente" name="remetente" value="{{ filtros.remetente }}" placeholder="Nome remetente">
+        </div>
+        <div>
+            <label for="id_destinatario">Destinatário</label>
+            <input type="text" id="id_destinatario" name="destinatario" value="{{ filtros.destinatario }}" placeholder="Nome destinatário">
+        </div>
+        <div>
+            <label for="id_nota_fiscal">Nota fiscal</label>
+            <input type="text" id="id_nota_fiscal" name="nota_fiscal" value="{{ filtros.nota_fiscal }}" placeholder="Ex.: 27624 ou 27624, 27625">
+        </div>
+        <div>
+            <label for="id_motorista">Motorista</label>
+            <input type="text" id="id_motorista" name="motorista" value="{{ filtros.motorista }}" placeholder="Nome motorista">
+        </div>
+        <div>
+            <label for="id_placa">Placa</label>
+            <input type="text" id="id_placa" name="placa" value="{{ filtros.placa }}" placeholder="Ex.: ABC1D23">
+        </div>
+        <button type="submit" class="btn-core btn-core-primary">Filtrar</button>
+        <a href="{% url 'lista_carregamentos' %}" class="btn-core btn-core-secondary">Limpar</a>
+    </form>
+</div>
+
+<div class="core-table-wrap">
+{% include "fila/partials/tabela_lista_carregamentos.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){
+  $('#tabelaListaCarregamentos').DataTable({
+    language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json' },
+    order: [[1, 'asc']],
+    pageLength: 25
+  });
+});
+</script>
+{% endblock %}

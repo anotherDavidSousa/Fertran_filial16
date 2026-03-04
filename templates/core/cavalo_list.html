@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Cavalos - Agregamento{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
+<style>
+.core-table-wrap tbody tr.fluxo-minerio { background: rgba(255, 140, 0, 0.12); }
+.core-table-wrap tbody tr.fluxo-minerio:hover { background: rgba(255, 140, 0, 0.2); }
+
+/* Tabela compacta */
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tbody th,
+table.dataTable tbody td {
+  padding: 5px 10px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+}
+.core-table-wrap .badge-core {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+}
+.core-table-wrap .btn-core {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Cavalos</h1>
+  <p class="description">Cavalos com carreta acoplada.</p>
+</div>
+<div class="cards-row">
+  <div class="card-summary"><div class="label">Trucado</div><div class="value">{{ contador_trucado }}</div></div>
+  <div class="card-summary"><div class="label">Toco</div><div class="value">{{ contador_toco }}</div></div>
+  <div class="card-summary"><div class="label">Parado</div><div class="value">{{ contador_parado }}</div></div>
+  <div class="card-summary"><div class="label">Escória</div><div class="value">{{ contador_escoria }}</div></div>
+  <div class="card-summary"><div class="label">Minério</div><div class="value">{{ contador_minerio }}</div></div>
+</div>
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <form method="get" class="core-filters">
+    <div>
+      <label for="situacao">Situação</label>
+      <select id="situacao" name="situacao">
+        <option value="">Todas</option>
+        <option value="ativo" {% if situacao_filter == 'ativo' %}selected{% endif %}>Ativo</option>
+        <option value="parado" {% if situacao_filter == 'parado' %}selected{% endif %}>Parado</option>
+      </select>
+    </div>
+    <div>
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Todos</option>
+        <option value="trucado" {% if tipo_filter == 'trucado' %}selected{% endif %}>Trucado</option>
+        <option value="toco" {% if tipo_filter == 'toco' %}selected{% endif %}>Toco</option>
+        <option value="bi_truck" {% if tipo_filter == 'bi_truck' %}selected{% endif %}>Bi-truck</option>
+      </select>
+    </div>
+    <div>
+      <label for="fluxo">Fluxo</label>
+      <select id="fluxo" name="fluxo">
+        <option value="">Todos</option>
+        <option value="escoria" {% if fluxo_filter == 'escoria' %}selected{% endif %}>Escória</option>
+        <option value="minerio" {% if fluxo_filter == 'minerio' %}selected{% endif %}>Minério</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-core btn-core-primary">Filtrar</button>
+    <a href="{% url 'core:cavalo_list' %}" class="btn-core btn-core-secondary">Limpar</a>
+  </form>
+</div>
+<div class="core-table-wrap">
+  <table id="tabelaCavalos" class="core-table" style="width:100%">
+    <thead>
+      <tr>
+        <th>Placa</th>
+        <th>Ano</th>
+        <th>Tipo</th>
+        <th>Carreta</th>
+        <th>Motorista</th>
+        <th>Fluxo</th>
+        <th>Situação</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cavalo in cavalos %}
+      <tr class="{% if cavalo.fluxo == 'minerio' %}fluxo-minerio{% endif %}">
+        <td><a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa|default:"-" }}</a></td>
+        <td>{{ cavalo.ano|default:"-" }}</td>
+        <td>{% if cavalo.tipo %}<span class="badge-core badge-core-info">{{ cavalo.get_tipo_display }}</span>{% else %}-{% endif %}</td>
+        <td>{% if cavalo.carreta %}{{ cavalo.carreta.placa }}{% else %}S/Placa{% endif %}</td>
+        <td>{% if cavalo.motorista %}{{ cavalo.motorista.nome|default:"-" }}{% else %}-{% endif %}</td>
+        <td>{% if cavalo.fluxo %}{{ cavalo.get_fluxo_display }}{% else %}-{% endif %}</td>
+        <td>{% if cavalo.situacao %}<span class="badge-core {% if cavalo.situacao == 'ativo' %}badge-core-success{% else %}badge-core-warning{% endif %}">{{ cavalo.get_situacao_display }}</span>{% else %}-{% endif %}</td>
+        <td><a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:cavalo_edit' cavalo.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);">Nenhum cavalo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){
+  $('#tabelaCavalos').DataTable({
+    language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json' },
+    order: [[0, 'asc']],
+    pageLength: 25
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Cavalo - {{ cavalo.placa|default:"Sem placa" }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{{ cavalo.placa|default:"Cavalo" }}</h1>
+  <p class="description">Detalhes do cavalo.</p>
+</div>
+<div class="form-actions" style="margin-bottom:1rem;">
+  <a href="{% url 'core:cavalo_edit' cavalo.pk %}" class="btn-core btn-core-primary">Editar</a>
+  <a href="{% url 'core:cavalo_list' %}" class="btn-core btn-core-secondary">Voltar</a>
+</div>
+{% if cavalo.foto %}
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <div class="panel-title">Foto</div>
+  <p><img src="{{ cavalo.foto.url }}" alt="Foto {{ cavalo.placa }}" style="max-height:280px;object-fit:contain;border-radius:8px;"></p>
+</div>
+{% endif %}
+<div class="panel-detail">
+  <div class="panel-title">Informações</div>
+  <p class="card-line"><span class="card-field">Placa:</span> {{ cavalo.placa|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Ano/Cor:</span> {{ cavalo.ano|default:"-" }} / {{ cavalo.cor|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Fluxo:</span> {{ cavalo.get_fluxo_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Tipo:</span> {{ cavalo.get_tipo_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Classificação:</span> {{ cavalo.get_classificacao_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Situação:</span> {{ cavalo.get_situacao_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Proprietário:</span> {% if cavalo.proprietario %}<a href="{% url 'core:proprietario_detail' cavalo.proprietario.pk %}">{{ cavalo.proprietario.nome_razao_social }}</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Gestor:</span> {{ cavalo.gestor.nome|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Carreta:</span> {% if cavalo.carreta %}<a href="{% url 'core:carreta_detail' cavalo.carreta.pk %}">{{ cavalo.carreta.placa }}</a>{% else %}S/Placa{% endif %}</p>
+  <p class="card-line"><span class="card-field">Motorista:</span> {% if cavalo.motorista %}<a href="{% url 'core:motorista_detail' cavalo.motorista.pk %}">{{ cavalo.motorista.nome }}</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Documento:</span> {% if cavalo.documento %}<a href="{{ cavalo.documento.url }}" target="_blank">Ver documento</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Observações:</span> {{ cavalo.observacoes|default:"-" }}</p>
+</div>
+{% if logs %}
+<div class="panel-detail">
+  <div class="panel-title">Últimos logs</div>
+  <table class="core-table">
+    <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Descrição</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.data_hora|date:"d/m/Y H:i" }}</td>
+        <td>{{ log.get_tipo_display }}</td>
+        <td>{{ log.descricao|default:"-" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

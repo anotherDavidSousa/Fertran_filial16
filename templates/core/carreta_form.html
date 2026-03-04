@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if form_type == 'create' %}Nova Carreta{% else %}Editar Carreta{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{% if form_type == 'create' %}Nova Carreta{% else %}Editar Carreta{% endif %}</h1>
+  <p class="description">Preencha os dados da carreta.</p>
+</div>
+<div class="panel-detail">
+  <form method="post" enctype="multipart/form-data" class="core-form">
+    {% csrf_token %}
+    <div class="form-group"><label for="placa">Placa</label><input type="text" id="placa" name="placa" value="{% if carreta %}{{ carreta.placa }}{% endif %}" required></div>
+    <div class="form-group"><label for="marca">Marca</label><input type="text" id="marca" name="marca" value="{% if carreta %}{{ carreta.marca }}{% endif %}"></div>
+    <div class="form-group"><label for="modelo">Modelo</label><input type="text" id="modelo" name="modelo" value="{% if carreta %}{{ carreta.modelo }}{% endif %}"></div>
+    <div class="form-group"><label for="ano">Ano</label><input type="number" id="ano" name="ano" value="{% if carreta %}{{ carreta.ano }}{% endif %}"></div>
+    <div class="form-group"><label for="cor">Cor</label><input type="text" id="cor" name="cor" value="{% if carreta %}{{ carreta.cor }}{% endif %}"></div>
+    <div class="form-group">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Selecione...</option>
+        <option value="baixa" {% if carreta and carreta.tipo == 'baixa' %}selected{% endif %}>Baixa</option>
+        <option value="alta" {% if carreta and carreta.tipo == 'alta' %}selected{% endif %}>Alta</option>
+        <option value="canguru" {% if carreta and carreta.tipo == 'canguru' %}selected{% endif %}>Canguru</option>
+        <option value="vanderleia" {% if carreta and carreta.tipo == 'vanderleia' %}selected{% endif %}>Vanderleia</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="classificacao">Classificação</label>
+      <select id="classificacao" name="classificacao" required>
+        <option value="">Selecione...</option>
+        <option value="agregado" {% if carreta and carreta.classificacao == 'agregado' %}selected{% endif %}>Agregamento</option>
+        <option value="frota" {% if carreta and carreta.classificacao == 'frota' %}selected{% endif %}>Frota</option>
+        <option value="terceiro" {% if carreta and carreta.classificacao == 'terceiro' %}selected{% endif %}>Terceiro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="situacao">Situação</label>
+      <select id="situacao" name="situacao">
+        <option value="ativo" {% if not carreta or carreta.situacao == 'ativo' %}selected{% endif %}>Ativo</option>
+        <option value="parado" {% if carreta and carreta.situacao == 'parado' %}selected{% endif %}>Parado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="ultima_lavagem">Última Lavagem</label>
+      <input type="date" id="ultima_lavagem" name="ultima_lavagem" value="{% if carreta and carreta.ultima_lavagem %}{{ carreta.ultima_lavagem|date:'Y-m-d' }}{% endif %}">
+    </div>
+    <div class="form-group">
+      <label for="polietileno">Polietileno</label>
+      <select id="polietileno" name="polietileno">
+        <option value="">Selecione...</option>
+        <option value="sim" {% if carreta and carreta.polietileno == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if carreta and carreta.polietileno == 'nao' %}selected{% endif %}>Não</option>
+        <option value="metade" {% if carreta and carreta.polietileno == 'metade' %}selected{% endif %}>Metade</option>
+        <option value="danificado" {% if carreta and carreta.polietileno == 'danificado' %}selected{% endif %}>Danificado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="lona_facil">Lona Fácil</label>
+      <select id="lona_facil" name="lona_facil">
+        <option value="">Selecione...</option>
+        <option value="sim" {% if carreta and carreta.lona_facil == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if carreta and carreta.lona_facil == 'nao' %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="localizador">Localizador</label>
+      <select id="localizador" name="localizador">
+        <option value="">Selecione...</option>
+        <option value="sim" {% if carreta and carreta.localizador == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if carreta and carreta.localizador == 'nao' %}selected{% endif %}>Não</option>
+        <option value="nao_funciona" {% if carreta and carreta.localizador == 'nao_funciona' %}selected{% endif %}>Não Funciona</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="cones">Cones</label>
+      <select id="cones" name="cones">
+        <option value="">Selecione...</option>
+        <option value="sim" {% if carreta and carreta.cones == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if carreta and carreta.cones == 'nao' %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="step">Step</label>
+      <select id="step" name="step">
+        <option value="">Selecione...</option>
+        <option value="sim" {% if carreta and carreta.step == 'sim' %}selected{% endif %}>Sim</option>
+        <option value="nao" {% if carreta and carreta.step == 'nao' %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+    <div class="form-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" rows="4">{% if carreta %}{{ carreta.observacoes }}{% endif %}</textarea></div>
+    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if carreta and carreta.foto %}<span class="form-text">Atual: <a href="{{ carreta.foto.url }}" target="_blank">Ver foto</a></span>{% endif %}</div>
+    <div class="form-group"><label for="documento">Documento</label><input type="file" id="documento" name="documento">{% if carreta and carreta.documento %}<span class="form-text">Atual: <a href="{{ carreta.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}</div>
+    <div class="form-actions">
+      <button type="submit" class="btn-core btn-core-primary">Salvar</button>
+      <a href="{% if carreta %}{% url 'core:carreta_detail' carreta.pk %}{% else %}{% url 'core:carreta_list' %}{% endif %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

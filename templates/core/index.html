@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Agregamento - Dashboard{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Agregamento</h1>
+  <p class="description">Dashboard de cavalos, carretas e parceiros.</p>
+</div>
+<div class="cards-row">
+  <div class="card-summary">
+    <div class="label">Parceiros ativos</div>
+    <div class="value">{{ parceiros_ativos }}</div>
+  </div>
+  <div class="card-summary">
+    <div class="label">Cavalos</div>
+    <div class="value">{{ total_cavalos }}</div>
+  </div>
+  <div class="card-summary">
+    <div class="label">Carretas</div>
+    <div class="value">{{ total_carretas }}</div>
+  </div>
+  <div class="card-summary">
+    <div class="label">Carretas disponíveis</div>
+    <div class="value">{{ carretas_disponiveis }}</div>
+  </div>
+</div>
+<div class="cards-row">
+  <div class="card-summary">
+    <div class="label">Harsco / Escória</div>
+    <div class="value">{{ veiculos_escoria }}</div>
+  </div>
+  <div class="card-summary">
+    <div class="label">Bemisa / Minério</div>
+    <div class="value">{{ veiculos_minerio }}</div>
+  </div>
+  <div class="card-summary">
+    <div class="label">Outros fluxos</div>
+    <div class="value">{{ outros_fluxos }}</div>
+  </div>
+</div>
+{% endblock %}

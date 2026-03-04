@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Logs - Agregamento{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Logs</h1>
+  <p class="description">Histórico de alterações e eventos.</p>
+</div>
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <form method="get" class="core-filters">
+    <div>
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Todos</option>
+        <option value="acoplamento" {% if tipo_filter == 'acoplamento' %}selected{% endif %}>Acoplamento</option>
+        <option value="desacoplamento" {% if tipo_filter == 'desacoplamento' %}selected{% endif %}>Desacoplamento</option>
+        <option value="troca" {% if tipo_filter == 'troca' %}selected{% endif %}>Troca de Carreta</option>
+        <option value="desagregacao" {% if tipo_filter == 'desagregacao' %}selected{% endif %}>Desagregação</option>
+        <option value="motorista_adicionado" {% if tipo_filter == 'motorista_adicionado' %}selected{% endif %}>Motorista Adicionado</option>
+        <option value="motorista_removido" {% if tipo_filter == 'motorista_removido' %}selected{% endif %}>Motorista Removido</option>
+        <option value="motorista_alterado" {% if tipo_filter == 'motorista_alterado' %}selected{% endif %}>Motorista Alterado</option>
+        <option value="proprietario_alterado" {% if tipo_filter == 'proprietario_alterado' %}selected{% endif %}>Proprietário Alterado</option>
+        <option value="troca_proprietario" {% if tipo_filter == 'troca_proprietario' %}selected{% endif %}>Troca de Proprietário</option>
+      </select>
+    </div>
+    <div>
+      <label for="placa">Placa ou nome</label>
+      <input type="text" id="placa" name="placa" value="{{ placa_filter }}" placeholder="Placa, motorista ou proprietário">
+    </div>
+    <div>
+      <label for="data_inicio">Data início</label>
+      <input type="date" id="data_inicio" name="data_inicio" value="{{ data_inicio }}">
+    </div>
+    <div>
+      <label for="data_fim">Data fim</label>
+      <input type="date" id="data_fim" name="data_fim" value="{{ data_fim }}">
+    </div>
+    <button type="submit" class="btn-core btn-core-primary">Filtrar</button>
+    <a href="{% url 'core:log_list' %}" class="btn-core btn-core-secondary">Limpar</a>
+  </form>
+</div>
+<div class="panel-detail">
+  <table class="core-table">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Tipo</th>
+        <th>Placa Cavalo</th>
+        <th>Carreta Ant./Nova</th>
+        <th>Motorista Ant./Novo</th>
+        <th>Proprietário Ant./Novo</th>
+        <th>Descrição</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.data_hora|date:"d/m/Y H:i" }}</td>
+        <td><span class="badge-core badge-core-muted">{{ log.get_tipo_display }}</span></td>
+        <td>{{ log.placa_cavalo|default:"-" }}</td>
+        <td>{{ log.carreta_anterior|default:"-" }} / {{ log.carreta_nova|default:"-" }}</td>
+        <td>{{ log.motorista_anterior|default:"-" }} / {{ log.motorista_novo|default:"-" }}</td>
+        <td>{{ log.proprietario_anterior|default:"-" }} / {{ log.proprietario_novo|default:"-" }}</td>
+        <td><small>{{ log.descricao|default:"-" }}</small></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);">Nenhum log.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if logs.has_other_pages %}
+  <nav class="pagination-core">
+    {% if logs.has_previous %}
+    <a href="?page={{ logs.previous_page_number }}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if placa_filter %}&placa={{ placa_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">Anterior</a>
+    {% else %}
+    <span class="disabled">Anterior</span>
+    {% endif %}
+    <span>Página {{ logs.number }} de {{ logs.paginator.num_pages }}</span>
+    {% if logs.has_next %}
+    <a href="?page={{ logs.next_page_number }}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if placa_filter %}&placa={{ placa_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">Próxima</a>
+    {% else %}
+    <span class="disabled">Próxima</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

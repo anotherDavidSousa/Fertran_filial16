@@ -1,0 +1,56 @@
+from django.contrib import admin
+from .models import Carregamento, OST
+
+
+@admin.register(Carregamento)
+class CarregamentoAdmin(admin.ModelAdmin):
+    list_display = (
+        'nota_fiscal', 'chave_acesso', 'fluxo', 'emit_nome',
+        'datahora_emissao', 'arquivado', 'criado_em'
+    )
+    list_filter = ('fluxo', 'arquivado')
+    search_fields = ('chave_acesso', 'nota_fiscal', 'emit_nome', 'dest_nome', 'xProd_produto')
+    readonly_fields = ('criado_em', 'atualizado_em')
+    date_hierarchy = 'datahora_emissao'
+
+
+@admin.register(OST)
+class OSTAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'filial', 'serie', 'documento', 'remetente', 'destinatario',
+        'nota_fiscal', 'chave_acesso', 'criado_em', 'tem_carregamento', 'tem_pdf',
+    )
+    list_filter = ('data_manifesto', 'criado_em')
+    search_fields = (
+        'filial', 'serie', 'documento', 'remetente', 'destinatario',
+        'chave_acesso', 'motorista',
+    )
+    readonly_fields = ('criado_em', 'pdf_storage_key')
+    date_hierarchy = 'criado_em'
+    list_per_page = 50
+
+    def get_search_results(self, request, queryset, search_term):
+        """Inclui busca por número da nota fiscal (campo JSON lista)."""
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        term = (search_term or '').strip()
+        if term:
+            from django.db.models import Q
+            q_nf = Q(nota_fiscal__contains=[term])
+            try:
+                q_nf |= Q(nota_fiscal__contains=[int(term)])
+            except ValueError:
+                pass
+            qs_nf = self.model.objects.filter(q_nf)
+            queryset = (queryset | qs_nf).distinct()
+            use_distinct = True
+        return queryset, use_distinct
+
+    def tem_carregamento(self, obj):
+        return obj.carregamentos.exists()
+    tem_carregamento.boolean = True
+    tem_carregamento.short_description = 'Vinculado'
+
+    def tem_pdf(self, obj):
+        return bool(obj.pdf_storage_key)
+    tem_pdf.boolean = True
+    tem_pdf.short_description = 'PDF'

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if form_type == 'create' %}Novo Cavalo{% else %}Editar Cavalo{% endif %}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{% if form_type == 'create' %}Novo Cavalo{% else %}Editar Cavalo{% endif %}</h1>
+</div>
+<div class="panel-detail">
+  <form method="post" enctype="multipart/form-data" class="core-form">
+    {% csrf_token %}
+    <div class="form-group"><label for="placa">Placa</label><input type="text" id="placa" name="placa" value="{% if cavalo %}{{ cavalo.placa }}{% endif %}"></div>
+    <div class="form-group"><label for="ano">Ano</label><input type="number" id="ano" name="ano" value="{% if cavalo %}{{ cavalo.ano }}{% endif %}"></div>
+    <div class="form-group"><label for="cor">Cor</label><input type="text" id="cor" name="cor" value="{% if cavalo %}{{ cavalo.cor }}{% endif %}"></div>
+    <div class="form-group">
+      <label for="fluxo">Fluxo</label>
+      <select id="fluxo" name="fluxo">
+        <option value="">Selecione...</option>
+        <option value="escoria" {% if cavalo and cavalo.fluxo == 'escoria' %}selected{% endif %}>Escória</option>
+        <option value="minerio" {% if cavalo and cavalo.fluxo == 'minerio' %}selected{% endif %}>Minério</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="tipo">Tipo</label>
+      <select id="tipo" name="tipo">
+        <option value="">Selecione...</option>
+        <option value="bi_truck" {% if cavalo and cavalo.tipo == 'bi_truck' %}selected{% endif %}>Bi-truck</option>
+        <option value="toco" {% if cavalo and cavalo.tipo == 'toco' %}selected{% endif %}>Toco</option>
+        <option value="trucado" {% if cavalo and cavalo.tipo == 'trucado' %}selected{% endif %}>Trucado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="classificacao">Classificação</label>
+      <select id="classificacao" name="classificacao" onchange="filtrarCarretas()">
+        <option value="">Selecione...</option>
+        <option value="agregado" {% if cavalo and cavalo.classificacao == 'agregado' %}selected{% endif %}>Agregado</option>
+        <option value="frota" {% if cavalo and cavalo.classificacao == 'frota' %}selected{% endif %}>Frota</option>
+        <option value="terceiro" {% if cavalo and cavalo.classificacao == 'terceiro' %}selected{% endif %}>Terceiro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="situacao">Situação</label>
+      <select id="situacao" name="situacao">
+        <option value="">Selecione...</option>
+        <option value="ativo" {% if cavalo and cavalo.situacao == 'ativo' %}selected{% endif %}>Ativo</option>
+        <option value="parado" {% if cavalo and cavalo.situacao == 'parado' %}selected{% endif %}>Parado</option>
+        <option value="desagregado" {% if cavalo and cavalo.situacao == 'desagregado' %}selected{% endif %}>Desagregado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="proprietario">Proprietário</label>
+      <select id="proprietario" name="proprietario">
+        <option value="">Selecione...</option>
+        {% for proprietario in proprietarios %}
+        <option value="{{ proprietario.pk }}" {% if cavalo and cavalo.proprietario and cavalo.proprietario.pk == proprietario.pk %}selected{% endif %}>{{ proprietario.nome_razao_social }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="gestor">Gestor</label>
+      <select id="gestor" name="gestor">
+        <option value="">Selecione...</option>
+        {% for gestor in gestores %}
+        <option value="{{ gestor.pk }}" {% if cavalo and cavalo.gestor and cavalo.gestor.pk == gestor.pk %}selected{% endif %}>{{ gestor.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="motorista">Motorista</label>
+      <select id="motorista" name="motorista">
+        <option value="">Selecione...</option>
+        {% for motorista in motoristas %}
+        <option value="{{ motorista.pk }}" {% if cavalo and cavalo.motorista and cavalo.motorista.pk == motorista.pk %}selected{% endif %}>{{ motorista.nome }}{% if motorista.cpf %} - {{ motorista.cpf }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      <span class="form-text">Se o motorista estiver em outro cavalo, a associação anterior será removida.</span>
+    </div>
+    <div class="form-group">
+      <label for="carreta">Carreta Agregada</label>
+      <select id="carreta" name="carreta">
+        <option value="">Nenhuma</option>
+        <option value="s_placa" id="opcao_s_placa" {% if cavalo and cavalo.tipo == 'bi_truck' and not cavalo.carreta %}selected{% endif %}>S/Placa</option>
+        {% for carreta in carretas_disponiveis %}
+        <option value="{{ carreta.pk }}" data-classificacao="{{ carreta.classificacao|default:'' }}" {% if cavalo and cavalo.carreta and cavalo.carreta.pk == carreta.pk %}selected{% endif %}>{{ carreta.placa }}{% if carreta.classificacao %} ({{ carreta.get_classificacao_display }}){% endif %}{% if not carreta.disponivel %} (Já acoplada){% endif %}</option>
+        {% endfor %}
+      </select>
+      <span class="form-text">Apenas carretas compatíveis com a classificação do cavalo.</span>
+    </div>
+    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if cavalo and cavalo.foto %}<span class="form-text">Atual: <a href="{{ cavalo.foto.url }}" target="_blank">Ver</a></span>{% endif %}</div>
+    <div class="form-group"><label for="documento">Documento</label><input type="file" id="documento" name="documento">{% if cavalo and cavalo.documento %}<span class="form-text">Atual: <a href="{{ cavalo.documento.url }}" target="_blank">Ver</a></span>{% endif %}</div>
+    <div class="form-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes">{% if cavalo %}{{ cavalo.observacoes }}{% endif %}</textarea></div>
+    <div class="form-actions">
+      <button type="submit" class="btn-core btn-core-primary">Salvar</button>
+      <a href="{% if cavalo %}{% url 'core:cavalo_detail' cavalo.pk %}{% else %}{% url 'core:cavalo_list' %}{% endif %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+<script>
+function filtrarCarretas() {
+  var tipoCavalo = document.getElementById('tipo').value;
+  var classificacaoCavalo = document.getElementById('classificacao').value;
+  var selectCarreta = document.getElementById('carreta');
+  var options = selectCarreta.getElementsByTagName('option');
+  var selectedValue = selectCarreta.value;
+  var selectedOptionHidden = false;
+  var opcaoSPlaca = document.getElementById('opcao_s_placa');
+  if (tipoCavalo === 'bi_truck') {
+    if (selectedValue !== 's_placa' && selectedValue !== '') selectCarreta.value = 's_placa';
+    for (var i = 0; i < options.length; i++) {
+      var option = options[i];
+      if (option.value === '' || option.value === 's_placa') option.style.display = '';
+      else { option.style.display = 'none'; if (option.value === selectedValue) selectedOptionHidden = true; }
+    }
+  } else {
+    if (opcaoSPlaca) { opcaoSPlaca.style.display = 'none'; if (selectedValue === 's_placa') selectCarreta.value = ''; }
+    var classificacaoMap = { 'agregado': 'agregado', 'frota': 'frota', 'terceiro': 'terceiro' };
+    var classificacaoCarretaEsperada = classificacaoMap[classificacaoCavalo] || null;
+    for (var i = 0; i < options.length; i++) {
+      var option = options[i];
+      if (option.value === '' || option.value === 's_placa') {
+        if (option.value === '') option.style.display = '';
+        else option.style.display = 'none';
+      } else {
+        var classificacaoCarreta = option.getAttribute('data-classificacao');
+        if (!classificacaoCavalo) { option.style.display = 'none'; if (option.value === selectedValue) selectedOptionHidden = true; }
+        else {
+          if (classificacaoCarreta === classificacaoCarretaEsperada) option.style.display = '';
+          else { option.style.display = 'none'; if (option.value === selectedValue) selectedOptionHidden = true; }
+        }
+      }
+    }
+  }
+  if (selectedOptionHidden) selectCarreta.value = '';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var tipoSelect = document.getElementById('tipo');
+  var classificacaoSelect = document.getElementById('classificacao');
+  if (tipoSelect) tipoSelect.addEventListener('change', filtrarCarretas);
+  if (classificacaoSelect) classificacaoSelect.addEventListener('change', filtrarCarretas);
+  filtrarCarretas();
+});
+</script>
+{% endblock %}

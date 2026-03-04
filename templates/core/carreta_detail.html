@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Carreta - {{ carreta.placa|default:"Sem placa" }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{{ carreta.placa|default:"Carreta" }}</h1>
+  <p class="description">Detalhes da carreta.</p>
+</div>
+<div class="form-actions" style="margin-bottom:1rem;">
+  <a href="{% url 'core:carreta_edit' carreta.pk %}" class="btn-core btn-core-primary">Editar</a>
+  <a href="{% url 'core:carreta_list' %}" class="btn-core btn-core-secondary">Voltar</a>
+</div>
+{% if carreta.foto %}
+<div class="panel-detail" style="margin-bottom:1rem;">
+  <div class="panel-title">Foto</div>
+  <p><img src="{{ carreta.foto.url }}" alt="Foto {{ carreta.placa }}" style="max-height:280px;object-fit:contain;border-radius:8px;"></p>
+</div>
+{% endif %}
+<div class="panel-detail">
+  <div class="panel-title">Informações</div>
+  <p class="card-line"><span class="card-field">Placa:</span> {{ carreta.placa|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Marca/Modelo:</span> {{ carreta.marca|default:"" }} {{ carreta.modelo|default:"" }}</p>
+  <p class="card-line"><span class="card-field">Ano/Cor:</span> {{ carreta.ano|default:"-" }} / {{ carreta.cor|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Tipo:</span> {{ carreta.get_tipo_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Classificação:</span> {{ carreta.get_classificacao_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Situação:</span> {{ carreta.get_situacao_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Última/Próxima lavagem:</span> {% if carreta.ultima_lavagem %}{{ carreta.ultima_lavagem|date:"d/m/Y" }}{% else %}-{% endif %} / {% if carreta.proxima_lavagem %}{{ carreta.proxima_lavagem|date:"d/m/Y" }}{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Cavalo acoplado:</span> {% with cavalo=carreta.get_cavalo %}{% if cavalo %}<a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa }}</a>{% else %}-{% endif %}{% endwith %}</p>
+  <p class="card-line"><span class="card-field">Documento:</span> {% if carreta.documento %}<a href="{{ carreta.documento.url }}" target="_blank">Ver documento</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Observações:</span> {{ carreta.observacoes|default:"-" }}</p>
+</div>
+{% endblock %}

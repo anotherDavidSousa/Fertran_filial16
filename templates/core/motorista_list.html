@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Motoristas - Agregamento{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
+<style>
+/* Tabela compacta */
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tbody th,
+table.dataTable tbody td {
+  padding: 5px 10px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+}
+.panel-detail .badge-core {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+}
+.panel-detail .btn-core {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+}
+</style>{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Motoristas</h1>
+  <p class="description">Motoristas com cavalo associado.</p>
+</div>
+<div class="panel-detail">
+  <table class="core-table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Cavalo</th>
+        <th>Carreta</th>
+        <th>Tipo</th>
+        <th>WhatsApp</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for motorista in motoristas %}
+      <tr>
+        <td><a href="{% url 'core:motorista_detail' motorista.pk %}">{{ motorista.nome|default:"-" }}</a></td>
+        <td>{{ motorista.cpf|default:"-" }}</td>
+        <td>{% if motorista.cavalo %}<a href="{% url 'core:cavalo_detail' motorista.cavalo.pk %}"><span class="badge-core badge-core-info">{{ motorista.cavalo.placa|default:"-" }}</span></a>{% else %}-{% endif %}</td>
+        <td>{% if motorista.cavalo and motorista.cavalo.carreta %}<span class="badge-core badge-core-muted">{{ motorista.cavalo.carreta.placa|default:"-" }}</span>{% else %}-{% endif %}</td>
+        <td>{% if motorista.cavalo and motorista.cavalo.tipo %}{{ motorista.cavalo.get_tipo_display }}{% else %}-{% endif %}</td>
+        <td>{% if motorista.whatsapp %}<a href="https://wa.me/55{{ motorista.whatsapp|cut:' '|cut:'('|cut:')'|cut:'-' }}" target="_blank" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">WhatsApp</a>{% else %}-{% endif %}</td>
+        <td><a href="{% url 'core:motorista_detail' motorista.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:motorista_edit' motorista.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);">Nenhum motorista com cavalo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

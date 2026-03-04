@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Proprietário - {{ proprietario.nome_razao_social|default:"Sem nome" }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>{{ proprietario.nome_razao_social|default:"Proprietário" }}</h1>
+  <p class="description">Detalhes do proprietário/parceiro.</p>
+</div>
+<div class="form-actions" style="margin-bottom:1rem;">
+  <a href="{% url 'core:proprietario_edit' proprietario.pk %}" class="btn-core btn-core-primary">Editar</a>
+  <a href="{% url 'core:proprietario_list' %}" class="btn-core btn-core-secondary">Voltar</a>
+</div>
+<div class="panel-detail">
+  <div class="panel-title">Informações</div>
+  <p class="card-line"><span class="card-field">Código:</span> {% if proprietario.codigo %}<span class="badge-core badge-core-info">{{ proprietario.codigo }}</span>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Nome/Razão Social:</span> {{ proprietario.nome_razao_social|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Tipo:</span> {{ proprietario.get_tipo_display|default:"-" }}</p>
+  <p class="card-line"><span class="card-field">Documento:</span> {% if proprietario.documento %}<a href="{{ proprietario.documento.url }}" target="_blank">Ver documento</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Observações:</span> {{ proprietario.observacoes|default:"-" }}</p>
+</div>
+{% if cavalos %}
+<div class="panel-detail">
+  <div class="panel-title">Cavalos ({{ cavalos.count }})</div>
+  <table class="core-table">
+    <thead><tr><th>Placa</th><th>Situação</th><th>Fluxo</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for cavalo in cavalos %}
+      <tr>
+        <td>{{ cavalo.placa|default:"-" }}</td>
+        <td>{{ cavalo.get_situacao_display|default:"-" }}</td>
+        <td>{{ cavalo.get_fluxo_display|default:"-" }}</td>
+        <td><a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

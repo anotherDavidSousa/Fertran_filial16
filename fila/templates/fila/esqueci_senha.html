@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esqueceu a senha | Filial 16</title>
+    <link rel="stylesheet" href="{% static 'fila/css/login.css' %}">
+    <style>
+        .info-box { max-width: 360px; margin: 2rem auto; padding: 2rem; background: rgba(255,255,255,0.75); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center; }
+        .info-box h1 { margin: 0 0 1rem 0; font-size: 1.25rem; color: #1a1a2e; }
+        .info-box p { margin: 0 0 1.5rem 0; color: #4a4a5a; font-size: 0.95rem; }
+        .info-box a { color: #7c3aed; text-decoration: none; }
+        .info-box a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="login-page">
+    <div class="login-backdrop"></div>
+    <div class="info-box">
+        <h1>Esqueceu a senha?</h1>
+        <p>Para redefinir sua senha, entre em contato com o administrador do sistema.</p>
+        <a href="{% url 'login' %}">← Voltar ao login</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Proprietários - Agregamento{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
+<style>
+/* Tabela compacta */
+table.dataTable thead th,
+table.dataTable thead td,
+table.dataTable tbody th,
+table.dataTable tbody td {
+  padding: 5px 10px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+}
+.core-table-wrap .badge-core {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+}
+.core-table-wrap .btn-core {
+  font-size: 0.78rem !important;
+  padding: 0.2rem 0.45rem !important;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <h1>Proprietários</h1>
+  <p class="description">Parceiros com cavalos agregados (com carreta acoplada).</p>
+</div>
+<div class="panel-detail" style="margin-bottom: 1rem;">
+  <div class="panel-title">Filtros de período</div>
+  <form method="get" class="core-filters">
+    <div>
+      <label for="data_inicio">Data início</label>
+      <input type="date" id="data_inicio" name="data_inicio" value="{{ data_inicio }}">
+    </div>
+    <div>
+      <label for="data_fim">Data fim</label>
+      <input type="date" id="data_fim" name="data_fim" value="{{ data_fim }}">
+    </div>
+    <button type="submit" class="btn-core btn-core-primary">Filtrar</button>
+    <a href="{% url 'core:proprietario_list' %}" class="btn-core btn-core-secondary">Limpar</a>
+  </form>
+</div>
+<div class="core-table-wrap">
+  <table id="tabelaParceiros" class="core-table" style="width:100%">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nome/Razão Social</th>
+        <th>Tipo</th>
+        <th>Cavalo 1</th>
+        <th>Cavalo 2</th>
+        <th>Cavalo 3</th>
+        <th>WhatsApp</th>
+        <th>Faturamento</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in dados_parceiros %}
+      <tr>
+        <td>{% if item.parceiro.codigo %}<span class="badge-core badge-core-info">{{ item.parceiro.codigo }}</span>{% else %}-{% endif %}</td>
+        <td><strong>{{ item.parceiro.nome_razao_social|default:"-" }}</strong></td>
+        <td>{% if item.parceiro.tipo == 'PF' %}<span class="badge-core badge-core-info">PF</span>{% elif item.parceiro.tipo == 'PJ' %}<span class="badge-core badge-core-warning">PJ</span>{% else %}-{% endif %}</td>
+        <td>{% if item.cavalo_1.placa %}<a href="{% url 'core:cavalo_detail' item.cavalo_1.id %}">{{ item.cavalo_1.placa }}</a>{% else %}-{% endif %}</td>
+        <td>{% if item.cavalo_2.placa %}<a href="{% url 'core:cavalo_detail' item.cavalo_2.id %}">{{ item.cavalo_2.placa }}</a>{% else %}-{% endif %}</td>
+        <td>{% if item.cavalo_3.placa %}<a href="{% url 'core:cavalo_detail' item.cavalo_3.id %}">{{ item.cavalo_3.placa }}</a>{% else %}-{% endif %}</td>
+        <td>{% if item.parceiro.whatsapp %}<a href="https://wa.me/55{{ item.whatsapp_limpo }}" target="_blank" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">WhatsApp</a>{% else %}-{% endif %}</td>
+        <td>R$ {{ item.faturamento_total|floatformat:2 }}</td>
+        <td>
+          <a href="{% url 'core:proprietario_detail' item.parceiro.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a>
+          <a href="{% url 'core:proprietario_edit' item.parceiro.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:1.5rem;">Nenhum parceiro ativo encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){
+  $('#tabelaParceiros').DataTable({
+    language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json' },
+    order: [[1, 'asc']],
+    pageLength: 25
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Manifestados{% endblock %}
+
+{% block content %}
+<div class="page-hero page-hero-manifestados">
+    <h1><img src="{% static 'fila/images/Manifestados-icon.gif' %}" alt="" class="manifestados-hero-icon"> Manifestados</h1>
+</div>
+
+<div class="cards-row manifestados-cards-row">
+    <div class="card-summary card-archived">
+        <span class="label">Total manifestados</span>
+        <span class="value">{{ total_arquivados }}</span>
+    </div>
+    <div class="card-summary card-filtrado">
+        <span class="label">Exibindo</span>
+        <span class="value">{{ total_filtrado }}</span>
+    </div>
+</div>
+
+<form method="get" action="{% url 'manifestados' %}" class="manifestados-filtros" id="manifestados-filtros">
+    <div class="filtros-grid">
+        <div class="filtro-group filtro-periodo">
+            <label for="id_data_inicio">Período (de)</label>
+            <input type="date" id="id_data_inicio" name="data_inicio" value="{{ filtros.data_inicio }}" class="filtro-input">
+        </div>
+        <div class="filtro-group filtro-periodo">
+            <label for="id_data_fim">Até</label>
+            <input type="date" id="id_data_fim" name="data_fim" value="{{ filtros.data_fim }}" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_fluxo">Fluxo</label>
+            <input type="text" id="id_fluxo" name="fluxo" value="{{ filtros.fluxo }}" placeholder="Ex.: Pedágio" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_remetente">Remetente</label>
+            <input type="text" id="id_remetente" name="remetente" value="{{ filtros.remetente }}" placeholder="Nome remetente" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_destinatario">Destinatário</label>
+            <input type="text" id="id_destinatario" name="destinatario" value="{{ filtros.destinatario }}" placeholder="Nome destinatário" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_nota_fiscal">Nota fiscal</label>
+            <input type="text" id="id_nota_fiscal" name="nota_fiscal" value="{{ filtros.nota_fiscal }}" placeholder="Ex.: 27624 ou 27624, 27625, 27626" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_motorista">Motorista</label>
+            <input type="text" id="id_motorista" name="motorista" value="{{ filtros.motorista }}" placeholder="Nome motorista" class="filtro-input">
+        </div>
+        <div class="filtro-group">
+            <label for="id_placa">Placa</label>
+            <input type="text" id="id_placa" name="placa" value="{{ filtros.placa }}" placeholder="Ex.: ABC1D23" class="filtro-input">
+        </div>
+    </div>
+    <div class="filtros-actions">
+        <button type="submit" class="btn-filtrar">Filtrar</button>
+        <a href="{% url 'manifestados' %}" class="btn-limpar">Limpar</a>
+    </div>
+</form>
+
+{% include "fila/partials/tabela_manifestados.html" %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-hero-manifestados { margin-bottom: 1rem; }
+.manifestados-cards-row { margin-bottom: 1.25rem; }
+.card-filtrado .value { color: var(--primary, #2563eb); }
+
+/* Barra de filtros */
+.manifestados-filtros {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+.filtro-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.filtro-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.filtro-input {
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filtro-input:focus {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.filtros-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.btn-filtrar, .btn-limpar {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-filtrar {
+    background: var(--primary, #2563eb);
+    color: #fff;
+    border: none;
+}
+.btn-filtrar:hover { filter: brightness(1.05); }
+.btn-limpar {
+    background: #fff;
+    color: var(--text-secondary, #64748b);
+    border: 1px solid var(--border, #e2e8f0);
+}
+.btn-limpar:hover { background: #f8fafc; color: #334155; }
+
+/* Tabela */
+.manifestados-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.manifestados-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+.manifestados-table th {
+    text-align: left;
+    padding: 0.75rem 0.65rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    border-bottom: 2px solid var(--border, #e2e8f0);
+    white-space: nowrap;
+}
+.manifestados-table td {
+    padding: 0.6rem 0.65rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.manifestados-table tbody tr:hover { background: #f8fafc; }
+.manifestados-table .col-num { width: 2.5rem; color: #94a3b8; }
+.manifestados-table .col-remetente,
+.manifestados-table .col-destinatario { max-width: 180px; }
+.manifestados-table .col-cte { white-space: nowrap; }
+.manifestados-table .col-acoes { white-space: nowrap; }
+.manifestados-table .btn-download-pdf {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    background: var(--success, #16a34a);
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+}
+.manifestados-table .btn-download-pdf:hover { filter: brightness(1.1); }
+.manifestados-table .no-pdf { color: #cbd5e1; }
+.manifestados-table .empty-cell {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary, #64748b);
+}
+</style>
+{% endblock %}
