@@ -205,7 +205,6 @@ def home_view(request):
         data_fim = data_inicio
 
     # Carregamentos que entraram no sistema no período (por criado_em)
-    from django.db.models.functions import TruncDate
     base_qs = Carregamento.objects.filter(
         criado_em__date__gte=data_inicio,
         criado_em__date__lte=data_fim,
@@ -214,6 +213,7 @@ def home_view(request):
     total_periodo = base_qs.count()
 
     # Por fluxo (para gráfico pizza)
+    from django.db.models import Sum
     fluxo_stats = (
         base_qs.values('fluxo')
         .annotate(total=Count('id'))
@@ -224,22 +224,16 @@ def home_view(request):
         for f in fluxo_stats
     ]
 
-    # Escala de tempo: intervalo em minutos entre cada nota (ordem de chegada)
-    entradas = list(
-        base_qs.order_by('criado_em').values_list('criado_em', 'nota_fiscal', 'pk')[:100]
+    # Peso por fluxo (gráfico de barras verticais)
+    fluxo_peso = (
+        base_qs.values('fluxo')
+        .annotate(peso=Sum('qCom_peso'))
+        .order_by('-peso')
     )
-    intervalos = []
-    for i in range(1, len(entradas)):
-        t0, t1 = entradas[i - 1][0], entradas[i][0]
-        if t0 and t1:
-            delta = (t1 - t0).total_seconds() / 60.0
-            intervalos.append({
-                'ordem': i,
-                'minutos': round(delta, 1),
-                'nota': entradas[i][1] or f'#{entradas[i][2]}',
-            })
-    # Se poucos pontos, agrupar em buckets para o gráfico (ex: 0-5min, 5-15, 15-30, 30+)
-    intervalos_para_grafico = intervalos  # usamos no front como barras ou linha
+    peso_por_fluxo = [
+        {'label': (f['fluxo'] or 'Sem fluxo'), 'peso': float(f['peso'] or 0)}
+        for f in fluxo_peso
+    ]
 
     # Manifestados no período (arquivados e manifestado_em no período)
     manifestados_no_periodo_qs = Carregamento.objects.filter(
@@ -249,23 +243,7 @@ def home_view(request):
     )
     total_manifestados_periodo = manifestados_no_periodo_qs.count()
 
-    # Por colaborador (quem manifestou no período)
-    manifestados_por_colaborador = (
-        manifestados_no_periodo_qs.values('manifestado_por__username', 'manifestado_por__first_name')
-        .annotate(total=Count('id'))
-        .order_by('-total')
-    )
-    colaboradores_stats = [
-        {
-            'username': r['manifestado_por__username'] or '—',
-            'nome': (r['manifestado_por__first_name'] or r['manifestado_por__username'] or '—').strip(),
-            'total': r['total'],
-        }
-        for r in manifestados_por_colaborador
-    ]
-
-    # Resumo de valores (peso e valor) no período
-    from django.db.models import Sum
+    # Resumo de valores (peso) no período
     resumo_valores = base_qs.aggregate(soma_peso=Sum('qCom_peso'))
     soma_peso = resumo_valores['soma_peso'] or 0
     # Formato PT-BR: ponto como separador de milhares (ex: 1.234.567)
@@ -278,11 +256,9 @@ def home_view(request):
         'total_periodo': total_periodo,
         'total_manifestados_periodo': total_manifestados_periodo,
         'pie_fluxos': pie_fluxos,
-        'intervalos': intervalos_para_grafico,
-        'colaboradores_stats': colaboradores_stats,
+        'peso_por_fluxo': peso_por_fluxo,
         'pie_fluxos_json': json.dumps(pie_fluxos),
-        'intervalos_json': json.dumps(intervalos_para_grafico),
-        'colaboradores_json': json.dumps(colaboradores_stats),
+        'peso_por_fluxo_json': json.dumps(peso_por_fluxo),
         'soma_peso_formatado': soma_peso_formatado,
     }
     return render(request, 'fila/home.html', context)

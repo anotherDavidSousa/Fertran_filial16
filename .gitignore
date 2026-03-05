@@ -40,3 +40,8 @@ upload_xmls.py
 # Gunicorn e sockets
 *.ctl
 *.sock
+
+# Adicione isso ao arquivo .gitignore na raiz do projeto
+nginx/ssl/
+minio/
+.env

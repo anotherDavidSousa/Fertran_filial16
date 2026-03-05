@@ -11,7 +11,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "0.0.0.0:5433:5432"
     networks:
       - filial16
     healthcheck:
