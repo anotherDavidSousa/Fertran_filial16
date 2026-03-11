@@ -146,9 +146,10 @@ def proprietario_edit(request, pk):
 @login_required
 @require_menu_perm('cavalos')
 def cavalo_list(request):
-    cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'gestor').exclude(
-        Q(carreta__isnull=True) | Q(situacao='desagregado')
-    )
+    # Apenas veículos com carreta acoplada OU bi-truck (S/Placa). Não mostrar desagregados.
+    cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'gestor').filter(
+        Q(carreta__isnull=False) | Q(tipo='bi_truck')
+    ).exclude(situacao='desagregado')
     from django.db import transaction
     with transaction.atomic():
         for cavalo in cavalos.filter(motorista__isnull=True, situacao='ativo'):
@@ -158,11 +159,12 @@ def cavalo_list(request):
     tipo_filter = request.GET.get('tipo', '')
     fluxo_filter = request.GET.get('fluxo', '')
     if situacao_filter:
-        cavalos = cavalos.filter(situacao=situacao_filter) if situacao_filter != 'parado' else cavalos.filter(situacao='parado')
+        cavalos = cavalos.filter(situacao=situacao_filter)
     if tipo_filter:
         cavalos = cavalos.filter(tipo=tipo_filter)
     if fluxo_filter:
         cavalos = cavalos.filter(fluxo=fluxo_filter)
+    # Ordem: 1.Classificação (Agregados, Frotas, Terceiros) 2.Situação (Ativo, Parado) 3.Fluxo (escória, minério, None) 4.Tipo (Toco, Trucado, Bi-truck) 5.Motorista (A-Z)
     cavalos = cavalos.annotate(
         ordem_classificacao=Case(
             When(classificacao='agregado', then=Value(0)),
@@ -184,9 +186,9 @@ def cavalo_list(request):
             output_field=IntegerField(),
         ),
         ordem_tipo=Case(
-            When(tipo='bi_truck', then=Value(0)),
-            When(tipo='toco', then=Value(1)),
-            When(tipo='trucado', then=Value(2)),
+            When(tipo='toco', then=Value(0)),
+            When(tipo='trucado', then=Value(1)),
+            When(tipo='bi_truck', then=Value(2)),
             default=Value(3),
             output_field=IntegerField(),
         ),
@@ -195,12 +197,7 @@ def cavalo_list(request):
             default=Value(''),
             output_field=CharField(),
         ),
-        ordem_terceiro=Case(
-            When(classificacao='terceiro', then=Value(1)),
-            default=Value(0),
-            output_field=IntegerField(),
-        ),
-    ).order_by('ordem_terceiro', 'ordem_classificacao', 'ordem_situacao', 'ordem_fluxo', 'ordem_tipo', 'motorista_nome_ordem')
+    ).order_by('ordem_classificacao', 'ordem_situacao', 'ordem_fluxo', 'ordem_tipo', 'motorista_nome_ordem')
     todos_cavalos_agregados = Cavalo.objects.filter(Q(classificacao='agregado') | Q(classificacao__isnull=True))
     return render(request, 'core/cavalo_list.html', {
         'cavalos': cavalos,
