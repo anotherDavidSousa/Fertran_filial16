@@ -1,7 +1,7 @@
-from django.db.models.signals import pre_save, post_save, post_delete
+from django.db.models.signals import pre_save, post_save, pre_delete, post_delete
 from django.dispatch import receiver
 from datetime import date
-from .models import Cavalo, LogCarreta, Motorista, HistoricoGestor
+from .models import Cavalo, Carreta, LogCarreta, Motorista, HistoricoGestor
 
 
 @receiver(pre_save, sender=Cavalo)
@@ -204,3 +204,54 @@ def sincronizar_cavalo_apos_mudanca_motorista(sender, instance, created, **kwarg
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Erro ao sincronizar cavalo após mudança de motorista: {str(e)}")
+
+
+@receiver(pre_delete, sender=Motorista)
+def _guardar_cavalo_para_sync_motorista(sender, instance, **kwargs):
+    """Guarda o cavalo do motorista para atualizar a planilha após o delete."""
+    instance._cavalo_pk_para_sheets = getattr(instance, 'cavalo_id', None)
+
+
+@receiver(post_delete, sender=Motorista)
+def sincronizar_planilha_apos_deletar_motorista(sender, instance, **kwargs):
+    try:
+        from .google_sheets import update_cavalo_async
+        cavalo_pk = getattr(instance, '_cavalo_pk_para_sheets', None)
+        if cavalo_pk:
+            update_cavalo_async(cavalo_pk)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Erro ao sincronizar planilha após deletar motorista: {str(e)}")
+
+
+@receiver(post_save, sender=Carreta)
+def sincronizar_planilha_apos_salvar_carreta(sender, instance, created, **kwargs):
+    """Quando uma carreta é criada ou alterada, atualiza o cavalo que a usa na planilha."""
+    try:
+        from .google_sheets import update_cavalo_async
+        cavalo = getattr(instance, 'cavalo_acoplado', None)
+        if cavalo:
+            update_cavalo_async(cavalo.pk)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Erro ao sincronizar planilha após salvar carreta: {str(e)}")
+
+
+@receiver(pre_delete, sender=Carreta)
+def _guardar_cavalos_para_sync_carreta(sender, instance, **kwargs):
+    """Antes de deletar a carreta, guarda os PKs dos cavalos que a usam (para atualizar a planilha)."""
+    instance._cavalo_pks_para_sheets = list(
+        Cavalo.objects.filter(carreta=instance).values_list('pk', flat=True)
+    )
+
+
+@receiver(post_delete, sender=Carreta)
+def sincronizar_planilha_apos_deletar_carreta(sender, instance, **kwargs):
+    """Após deletar a carreta, os cavalos que a usavam ficam com carreta=None; atualiza a planilha."""
+    try:
+        from .google_sheets import update_cavalo_async
+        for cavalo_pk in getattr(instance, '_cavalo_pks_para_sheets', []) or []:
+            update_cavalo_async(cavalo_pk)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Erro ao sincronizar planilha após deletar carreta: {str(e)}")

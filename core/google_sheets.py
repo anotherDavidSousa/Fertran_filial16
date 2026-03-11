@@ -124,11 +124,9 @@ def _get_insert_position(worksheet, cavalo):
             cavalo = Cavalo.objects.select_related('motorista', 'carreta', 'proprietario', 'gestor').get(pk=cavalo.pk)
         except Cavalo.DoesNotExist:
             return 2
-        todos_cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'proprietario', 'gestor').exclude(
-            Q(situacao='desagregado')
-        ).filter(
-            Q(tipo='bi_truck') | Q(carreta__isnull=False)
-        ).annotate(
+        todos_cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'proprietario', 'gestor').filter(
+            Q(carreta__isnull=False) | Q(tipo='bi_truck')
+        ).exclude(situacao='desagregado').annotate(
             ordem_classificacao=Case(
                 When(classificacao='agregado', then=Value(0)),
                 When(classificacao='frota', then=Value(1)),
@@ -149,9 +147,9 @@ def _get_insert_position(worksheet, cavalo):
                 output_field=IntegerField()
             ),
             ordem_tipo=Case(
-                When(tipo='bi_truck', then=Value(0)),
-                When(tipo='toco', then=Value(1)),
-                When(tipo='trucado', then=Value(2)),
+                When(tipo='toco', then=Value(0)),
+                When(tipo='trucado', then=Value(1)),
+                When(tipo='bi_truck', then=Value(2)),
                 default=Value(3),
                 output_field=IntegerField()
             ),
@@ -160,13 +158,7 @@ def _get_insert_position(worksheet, cavalo):
                 default=Value(''),
                 output_field=CharField()
             ),
-            ordem_terceiro=Case(
-                When(classificacao='terceiro', then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField()
-            )
         ).order_by(
-            'ordem_terceiro',
             'ordem_classificacao',
             'ordem_situacao',
             'ordem_fluxo',
@@ -174,8 +166,7 @@ def _get_insert_position(worksheet, cavalo):
             'motorista_nome_ordem'
         )
         classificacao_ordem = 0 if (cavalo.classificacao == 'agregado' or not cavalo.classificacao) else (1 if cavalo.classificacao == 'frota' else 2)
-        terceiro_ordem = 1 if cavalo.classificacao == 'terceiro' else 0
-        tipo_ordem = 0 if cavalo.tipo == 'bi_truck' else (1 if cavalo.tipo == 'toco' else (2 if cavalo.tipo == 'trucado' else 3))
+        tipo_ordem = 0 if cavalo.tipo == 'toco' else (1 if cavalo.tipo == 'trucado' else (2 if cavalo.tipo == 'bi_truck' else 3))
         motorista_nome = ''
         try:
             if cavalo.motorista:
@@ -183,7 +174,6 @@ def _get_insert_position(worksheet, cavalo):
         except (AttributeError, Exception):
             motorista_nome = ''
         cavalo_ordem = (
-            terceiro_ordem,
             classificacao_ordem,
             (0 if cavalo.situacao == 'ativo' else 1 if cavalo.situacao == 'parado' else 2),
             (0 if cavalo.fluxo == 'escoria' else 1 if cavalo.fluxo == 'minerio' else 2),
@@ -195,8 +185,7 @@ def _get_insert_position(worksheet, cavalo):
             if outro_cavalo.pk == cavalo.pk:
                 break
             outro_classificacao_ordem = 0 if (outro_cavalo.classificacao == 'agregado' or not outro_cavalo.classificacao) else (1 if outro_cavalo.classificacao == 'frota' else 2)
-            outro_terceiro_ordem = 1 if outro_cavalo.classificacao == 'terceiro' else 0
-            outro_tipo_ordem = 0 if outro_cavalo.tipo == 'bi_truck' else (1 if outro_cavalo.tipo == 'toco' else (2 if outro_cavalo.tipo == 'trucado' else 3))
+            outro_tipo_ordem = 0 if outro_cavalo.tipo == 'toco' else (1 if outro_cavalo.tipo == 'trucado' else (2 if outro_cavalo.tipo == 'bi_truck' else 3))
             outro_motorista_nome = ''
             try:
                 if outro_cavalo.motorista:
@@ -204,7 +193,6 @@ def _get_insert_position(worksheet, cavalo):
             except (AttributeError, Exception):
                 outro_motorista_nome = ''
             outro_ordem = (
-                outro_terceiro_ordem,
                 outro_classificacao_ordem,
                 (0 if outro_cavalo.situacao == 'ativo' else 1 if outro_cavalo.situacao == 'parado' else 2),
                 (0 if outro_cavalo.fluxo == 'escoria' else 1 if outro_cavalo.fluxo == 'minerio' else 2),
