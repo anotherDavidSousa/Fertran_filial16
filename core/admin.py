@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Q, Case, When, Value, IntegerField, F, CharField
 from .models import (
     Proprietario,
     Gestor,
@@ -36,12 +37,54 @@ class CavaloDocumentoInline(admin.TabularInline):
     extra = 1
 
 
+def _cavalos_queryset_ordenado(queryset):
+    """Filtro: apenas com carreta acoplada ou bi-truck. Ordem: Classificação → Situação → Fluxo → Tipo → Motorista (A-Z)."""
+    qs = queryset.filter(Q(carreta__isnull=False) | Q(tipo='bi_truck')).exclude(situacao='desagregado')
+    return qs.annotate(
+        ordem_classificacao=Case(
+            When(classificacao='agregado', then=Value(0)),
+            When(classificacao='frota', then=Value(1)),
+            When(classificacao='terceiro', then=Value(2)),
+            default=Value(0),
+            output_field=IntegerField(),
+        ),
+        ordem_situacao=Case(
+            When(situacao='ativo', then=Value(0)),
+            When(situacao='parado', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        ),
+        ordem_fluxo=Case(
+            When(fluxo='escoria', then=Value(0)),
+            When(fluxo='minerio', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        ),
+        ordem_tipo=Case(
+            When(tipo='toco', then=Value(0)),
+            When(tipo='trucado', then=Value(1)),
+            When(tipo='bi_truck', then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        ),
+        motorista_nome_ordem=Case(
+            When(motorista__isnull=False, then=F('motorista__nome')),
+            default=Value(''),
+            output_field=CharField(),
+        ),
+    ).order_by('ordem_classificacao', 'ordem_situacao', 'ordem_fluxo', 'ordem_tipo', 'motorista_nome_ordem')
+
+
 @admin.register(Cavalo)
 class CavaloAdmin(admin.ModelAdmin):
     list_display = ('placa', 'tipo', 'classificacao', 'situacao', 'proprietario', 'gestor', 'carreta', 'emissao_laudo')
     list_filter = ('tipo', 'classificacao', 'situacao', 'fluxo')
     search_fields = ('placa',)
     inlines = [CavaloDocumentoInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related('motorista', 'carreta', 'gestor')
+        return _cavalos_queryset_ordenado(qs)
 
 
 class CarretaDocumentoInline(admin.TabularInline):
