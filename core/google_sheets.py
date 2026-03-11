@@ -51,19 +51,19 @@ def _get_worksheet():
             worksheet = spreadsheet.worksheet(worksheet_name)
             try:
                 current_cols = worksheet.col_count
-                if current_cols < 13:
-                    logger.info(f"Expandindo planilha existente de {current_cols} para 13 colunas...")
-                    worksheet.resize(rows=worksheet.row_count, cols=13)
+                if current_cols < 14:
+                    logger.info(f"Expandindo planilha existente de {current_cols} para 14 colunas...")
+                    worksheet.resize(rows=worksheet.row_count, cols=14)
             except Exception as e:
                 logger.warning(f"Erro ao expandir planilha existente: {str(e)}")
         except gspread.exceptions.WorksheetNotFound:
             logger.info(f"Aba '{worksheet_name}' não encontrada. Criando...")
-            worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=13)
+            worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=14)
             headers = [
-                'Cavalo', 'Carreta', 'Motorista', 'Cavalo_MG', 'Carreta_MG', 'CPF', 'Tipo', 'Fluxo',
+                'Cavalos_MG1', 'Cavalo', 'Carreta', 'Motorista', 'Cavalo_MG', 'Carreta_MG', 'CPF', 'Tipo', 'Fluxo',
                 'Classificação', 'Codigo_parceiro', 'Tipo Parceiro', 'Parceiro', 'Situação'
             ]
-            worksheet.update('A1:M1', [headers], value_input_option='RAW')
+            worksheet.update('A1:N1', [headers], value_input_option='RAW')
         return worksheet
     except Exception as e:
         logger.error(f"Erro ao conectar ao Google Sheets: {str(e)}", exc_info=True)
@@ -72,7 +72,8 @@ def _get_worksheet():
 
 def _find_row_by_placa(worksheet, placa):
     try:
-        placas = worksheet.col_values(1)
+        # Coluna B (índice 2) = Cavalo (placa)
+        placas = worksheet.col_values(2)
         for idx, placa_na_planilha in enumerate(placas[1:], start=2):
             if placa_na_planilha and placa_na_planilha.strip().upper() == placa.strip().upper():
                 return idx
@@ -100,20 +101,22 @@ def _get_cavalo_row_data(cavalo):
     tipo_proprietario = '-'
     if cavalo.proprietario and cavalo.proprietario.tipo:
         tipo_proprietario = cavalo.proprietario.tipo
+    # Ordem: Cavalos_MG1 | Cavalo | Carreta | Motorista | Cavalo_MG | Carreta_MG | CPF | Tipo | Fluxo | Classificação | Codigo_parceiro | Tipo Parceiro | Parceiro | Situação
     return {
-        'A': placa_cavalo,
-        'B': placa_carreta,
-        'C': motorista_nome,
-        'D': placa_cavalo_mg,
-        'E': placa_carreta_mg,
-        'F': motorista_cpf,
-        'G': cavalo.get_tipo_display() if cavalo.tipo else '-',
-        'H': cavalo.get_fluxo_display() if cavalo.fluxo else '-',
-        'I': cavalo.get_classificacao_display() if cavalo.classificacao else '-',
-        'J': cavalo.proprietario.codigo if cavalo.proprietario and cavalo.proprietario.codigo else '-',
-        'K': tipo_proprietario,
-        'L': cavalo.proprietario.nome_razao_social if cavalo.proprietario else '-',
-        'M': cavalo.get_situacao_display() if cavalo.situacao else '-',
+        'A': placa_cavalo_mg,        # Cavalos_MG1 (repetido)
+        'B': placa_cavalo,           # Cavalo
+        'C': placa_carreta,          # Carreta
+        'D': motorista_nome,         # Motorista
+        'E': placa_cavalo_mg,        # Cavalo_MG
+        'F': placa_carreta_mg,       # Carreta_MG
+        'G': motorista_cpf,          # CPF
+        'H': cavalo.get_tipo_display() if cavalo.tipo else '-',       # Tipo
+        'I': cavalo.get_fluxo_display() if cavalo.fluxo else '-',    # Fluxo
+        'J': cavalo.get_classificacao_display() if cavalo.classificacao else '-',  # Classificação
+        'K': cavalo.proprietario.codigo if cavalo.proprietario and cavalo.proprietario.codigo else '-',  # Codigo_parceiro
+        'L': tipo_proprietario,      # Tipo Parceiro (PF/PJ)
+        'M': cavalo.proprietario.nome_razao_social if cavalo.proprietario else '-',  # Parceiro
+        'N': cavalo.get_situacao_display() if cavalo.situacao else '-',  # Situação
     }
 
 
@@ -267,8 +270,8 @@ def add_cavalo_to_sheets(cavalo_pk):
         row_num = _get_insert_position(worksheet, cavalo)
         try:
             current_cols = worksheet.col_count
-            if current_cols < 13:
-                worksheet.resize(rows=worksheet.row_count, cols=13)
+            if current_cols < 14:
+                worksheet.resize(rows=worksheet.row_count, cols=14)
         except Exception:
             pass
         row_data_dict = _get_cavalo_row_data(cavalo)
@@ -277,7 +280,7 @@ def add_cavalo_to_sheets(cavalo_pk):
             row_data_dict.get('D', ''), row_data_dict.get('E', ''), row_data_dict.get('F', ''),
             row_data_dict.get('G', ''), row_data_dict.get('H', ''), row_data_dict.get('I', ''),
             row_data_dict.get('J', ''), row_data_dict.get('K', ''), row_data_dict.get('L', ''),
-            row_data_dict.get('M', ''),
+            row_data_dict.get('M', ''), row_data_dict.get('N', ''),
         ]
         worksheet.insert_row(row_data_list, row_num, value_input_option='RAW')
         logger.info(f"Cavalo {cavalo.placa} adicionado na linha {row_num} do Google Sheets")

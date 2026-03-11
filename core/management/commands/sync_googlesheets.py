@@ -34,7 +34,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Linhas antigas removidas.'))
         except Exception as e:
             try:
-                worksheet.batch_clear(['A2:M1000'])
+                worksheet.batch_clear(['A2:N1000'])
                 self.stdout.write(self.style.SUCCESS('Conteúdo A2:M1000 limpo.'))
             except Exception as e2:
                 self.stderr.write(self.style.ERROR(f'Erro ao limpar: {e} / {e2}'))
@@ -109,11 +109,12 @@ class Command(BaseCommand):
                 row_data.get('K', ''),
                 row_data.get('L', ''),
                 row_data.get('M', ''),
+                row_data.get('N', ''),
             ])
 
         try:
             end_row = 1 + len(rows)
-            worksheet.update(f'A2:M{end_row}', rows, value_input_option='RAW')
+            worksheet.update(f'A2:N{end_row}', rows, value_input_option='RAW')
             self.stdout.write(self.style.SUCCESS(f'Sincronização concluída: {len(rows)} cavalo(s) enviado(s) para a planilha.'))
         except Exception as e:
             self.stderr.write(self.style.ERROR(f'Erro ao atualizar planilha: {e}'))
