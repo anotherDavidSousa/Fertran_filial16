@@ -18,6 +18,10 @@ from .models import (
     Motorista,
     LogCarreta,
     HistoricoGestor,
+    CavaloDocumento,
+    CarretaDocumento,
+    ProprietarioDocumento,
+    MotoristaDocumento,
 )
 
 
@@ -111,6 +115,8 @@ def proprietario_create(request):
             documento=request.FILES.get('documento'),
         )
         proprietario.atualizar_status_automatico()
+        for f in request.FILES.getlist('documentos_extras'):
+            ProprietarioDocumento.objects.create(proprietario=proprietario, arquivo=f)
         return redirect('core:proprietario_detail', pk=proprietario.pk)
     return render(request, 'core/proprietario_form.html', {'form_type': 'create'})
 
@@ -129,6 +135,8 @@ def proprietario_edit(request, pk):
         if 'documento' in request.FILES:
             proprietario.documento = request.FILES['documento']
         proprietario.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            ProprietarioDocumento.objects.create(proprietario=proprietario, arquivo=f)
         proprietario.atualizar_status_automatico()
         return redirect('core:proprietario_detail', pk=proprietario.pk)
     return render(request, 'core/proprietario_form.html', {'proprietario': proprietario, 'form_type': 'edit'})
@@ -250,6 +258,7 @@ def cavalo_create(request):
             proprietario_id=request.POST.get('proprietario') or None,
             gestor_id=request.POST.get('gestor') or None,
             observacoes=request.POST.get('observacoes', ''),
+            emissao_laudo=request.POST.get('emissao_laudo') or None,
             documento=request.FILES.get('documento'),
         )
         if 'foto' in request.FILES:
@@ -277,6 +286,8 @@ def cavalo_create(request):
             except Motorista.DoesNotExist:
                 pass
         cavalo.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            CavaloDocumento.objects.create(cavalo=cavalo, arquivo=f)
         return redirect('core:cavalo_detail', pk=cavalo.pk)
     return render(request, 'core/cavalo_form.html', _cavalo_form_context(None, 'create'))
 
@@ -296,6 +307,7 @@ def cavalo_edit(request, pk):
         cavalo.proprietario_id = request.POST.get('proprietario') or None
         cavalo.gestor_id = request.POST.get('gestor') or None
         cavalo.observacoes = request.POST.get('observacoes', '')
+        cavalo.emissao_laudo = request.POST.get('emissao_laudo') or None
         if 'documento' in request.FILES:
             cavalo.documento = request.FILES['documento']
         if 'foto' in request.FILES:
@@ -338,6 +350,8 @@ def cavalo_edit(request, pk):
             except Motorista.DoesNotExist:
                 pass
         cavalo.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            CavaloDocumento.objects.create(cavalo=cavalo, arquivo=f)
         return redirect('core:cavalo_detail', pk=cavalo.pk)
     return render(request, 'core/cavalo_form.html', _cavalo_form_context(cavalo, 'edit'))
 
@@ -404,7 +418,10 @@ def carreta_create(request):
             carreta.foto = request.FILES['foto']
         if 'documento' in request.FILES:
             carreta.documento = request.FILES['documento']
-            carreta.save()
+        carreta.emissao_laudo = request.POST.get('emissao_laudo') or None
+        carreta.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            CarretaDocumento.objects.create(carreta=carreta, arquivo=f)
         return redirect('core:carreta_detail', pk=carreta.pk)
     return render(request, 'core/carreta_form.html', {'form_type': 'create'})
 
@@ -436,11 +453,14 @@ def carreta_edit(request, pk):
         carreta.classificacao = request.POST.get('classificacao', '')
         carreta.situacao = request.POST.get('situacao', 'ativo')
         carreta.observacoes = request.POST.get('observacoes', '')
+        carreta.emissao_laudo = request.POST.get('emissao_laudo') or None
         if 'foto' in request.FILES:
             carreta.foto = request.FILES['foto']
         if 'documento' in request.FILES:
             carreta.documento = request.FILES['documento']
         carreta.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            CarretaDocumento.objects.create(carreta=carreta, arquivo=f)
         return redirect('core:carreta_detail', pk=carreta.pk)
     return render(request, 'core/carreta_form.html', {'carreta': carreta, 'form_type': 'edit'})
 
@@ -475,6 +495,8 @@ def motorista_create(request):
         if 'documento' in request.FILES:
             motorista.documento = request.FILES['documento']
         motorista.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            MotoristaDocumento.objects.create(motorista=motorista, arquivo=f)
         return redirect('core:motorista_detail', pk=motorista.pk)
     return render(request, 'core/motorista_form.html', {'form_type': 'create', 'cavalos': Cavalo.objects.all()})
 
@@ -493,6 +515,8 @@ def motorista_edit(request, pk):
         if 'documento' in request.FILES:
             motorista.documento = request.FILES['documento']
         motorista.save()
+        for f in request.FILES.getlist('documentos_extras'):
+            MotoristaDocumento.objects.create(motorista=motorista, arquivo=f)
         return redirect('core:motorista_detail', pk=motorista.pk)
     return render(request, 'core/motorista_form.html', {'motorista': motorista, 'form_type': 'edit', 'cavalos': Cavalo.objects.all()})
 

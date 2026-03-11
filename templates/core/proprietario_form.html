@@ -39,9 +39,20 @@
       <input type="text" id="whatsapp" name="whatsapp" value="{% if proprietario %}{{ proprietario.whatsapp }}{% endif %}" placeholder="(11) 99999-9999">
     </div>
     <div class="form-group">
-      <label for="documento">Documento</label>
+      <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">
       {% if proprietario and proprietario.documento %}<span class="form-text">Atual: <a href="{{ proprietario.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+    </div>
+    <div class="form-group">
+      <label for="documentos_extras">Outros documentos</label>
+      <input type="file" id="documentos_extras" name="documentos_extras" multiple>
+      {% if proprietario and proprietario.documentos_extras.all %}
+      <span class="form-text">Atuais:
+        {% for doc in proprietario.documentos_extras.all %}
+          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </span>
+      {% endif %}
     </div>
     <div class="form-group">
       <label for="observacoes">Observações</label>

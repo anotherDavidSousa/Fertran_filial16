@@ -105,6 +105,7 @@ class Carreta(models.Model):
     local = models.CharField(max_length=255, blank=True, null=True, verbose_name='Local', help_text='Atualizado automaticamente por API')
     foto = models.ImageField(upload_to='carretas/fotos/', blank=True, null=True, verbose_name='Foto')
     documento = models.FileField(upload_to='carretas/documentos/', blank=True, null=True, verbose_name='Documento')
+    emissao_laudo = models.DateField(blank=True, null=True, verbose_name='Emissão do laudo')
     observacoes = models.TextField(blank=True, null=True, verbose_name='Observações')
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -204,6 +205,7 @@ class Cavalo(models.Model):
         verbose_name='Gestor',
     )
     documento = models.FileField(upload_to='cavalos/documentos/', blank=True, null=True)
+    emissao_laudo = models.DateField(blank=True, null=True, verbose_name='Emissão do laudo')
     observacoes = models.TextField(blank=True, null=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -266,6 +268,58 @@ class Motorista(models.Model):
         if self.cavalo and self.pk:
             Motorista.objects.filter(cavalo=self.cavalo).exclude(pk=self.pk).update(cavalo=None)
         super().save(*args, **kwargs)
+
+
+class CavaloDocumento(models.Model):
+    cavalo = models.ForeignKey(Cavalo, on_delete=models.CASCADE, related_name='documentos_extras')
+    arquivo = models.FileField(upload_to='cavalos/documentos_extras/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Documento do Cavalo'
+        verbose_name_plural = 'Documentos do Cavalo'
+
+    def __str__(self):
+        return self.arquivo.name
+
+
+class CarretaDocumento(models.Model):
+    carreta = models.ForeignKey(Carreta, on_delete=models.CASCADE, related_name='documentos_extras')
+    arquivo = models.FileField(upload_to='carretas/documentos_extras/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Documento da Carreta'
+        verbose_name_plural = 'Documentos da Carreta'
+
+    def __str__(self):
+        return self.arquivo.name
+
+
+class ProprietarioDocumento(models.Model):
+    proprietario = models.ForeignKey(Proprietario, on_delete=models.CASCADE, related_name='documentos_extras')
+    arquivo = models.FileField(upload_to='proprietarios/documentos_extras/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Documento do Proprietário'
+        verbose_name_plural = 'Documentos do Proprietário'
+
+    def __str__(self):
+        return self.arquivo.name
+
+
+class MotoristaDocumento(models.Model):
+    motorista = models.ForeignKey(Motorista, on_delete=models.CASCADE, related_name='documentos_extras')
+    arquivo = models.FileField(upload_to='motoristas/documentos_extras/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Documento do Motorista'
+        verbose_name_plural = 'Documentos do Motorista'
+
+    def __str__(self):
+        return self.arquivo.name
 
 
 class LogCarreta(models.Model):

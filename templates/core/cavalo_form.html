@@ -86,8 +86,24 @@
       </select>
       <span class="form-text">Apenas carretas compatíveis com a classificação do cavalo.</span>
     </div>
+    <div class="form-group"><label for="emissao_laudo">Emissão do laudo</label><input type="date" id="emissao_laudo" name="emissao_laudo" value="{% if cavalo and cavalo.emissao_laudo %}{{ cavalo.emissao_laudo|date:'Y-m-d' }}{% endif %}"></div>
     <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if cavalo and cavalo.foto %}<span class="form-text">Atual: <a href="{{ cavalo.foto.url }}" target="_blank">Ver</a></span>{% endif %}</div>
-    <div class="form-group"><label for="documento">Documento</label><input type="file" id="documento" name="documento">{% if cavalo and cavalo.documento %}<span class="form-text">Atual: <a href="{{ cavalo.documento.url }}" target="_blank">Ver</a></span>{% endif %}</div>
+    <div class="form-group">
+      <label for="documento">Documento principal</label>
+      <input type="file" id="documento" name="documento">
+      {% if cavalo and cavalo.documento %}<span class="form-text">Atual: <a href="{{ cavalo.documento.url }}" target="_blank">Ver</a></span>{% endif %}
+    </div>
+    <div class="form-group">
+      <label for="documentos_extras">Outros documentos</label>
+      <input type="file" id="documentos_extras" name="documentos_extras" multiple>
+      {% if cavalo and cavalo.documentos_extras.all %}
+      <span class="form-text">Atuais:
+        {% for doc in cavalo.documentos_extras.all %}
+          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </span>
+      {% endif %}
+    </div>
     <div class="form-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes">{% if cavalo %}{{ cavalo.observacoes }}{% endif %}</textarea></div>
     <div class="form-actions">
       <button type="submit" class="btn-core btn-core-primary">Salvar</button>

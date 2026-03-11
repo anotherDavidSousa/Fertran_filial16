@@ -40,9 +40,20 @@
       {% if motorista and motorista.foto %}<span class="form-text">Atual: <a href="{{ motorista.foto.url }}" target="_blank">Ver foto</a></span>{% endif %}
     </div>
     <div class="form-group">
-      <label for="documento">Documento</label>
+      <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">
       {% if motorista and motorista.documento %}<span class="form-text">Atual: <a href="{{ motorista.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+    </div>
+    <div class="form-group">
+      <label for="documentos_extras">Outros documentos</label>
+      <input type="file" id="documentos_extras" name="documentos_extras" multiple>
+      {% if motorista and motorista.documentos_extras.all %}
+      <span class="form-text">Atuais:
+        {% for doc in motorista.documentos_extras.all %}
+          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </span>
+      {% endif %}
     </div>
     <div class="form-actions">
       <button type="submit" class="btn-core btn-core-primary">Salvar</button>
