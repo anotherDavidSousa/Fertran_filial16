@@ -103,9 +103,9 @@ def _get_cavalo_row_data(cavalo):
     return {
         'A': placa_cavalo,
         'B': placa_carreta,
-        'C': placa_cavalo_mg,
-        'D': placa_carreta_mg,
-        'E': motorista_nome,
+        'C': motorista_nome,
+        'D': placa_cavalo_mg,
+        'E': placa_carreta_mg,
         'F': motorista_cpf,
         'G': cavalo.get_tipo_display() if cavalo.tipo else '-',
         'H': cavalo.get_fluxo_display() if cavalo.fluxo else '-',
