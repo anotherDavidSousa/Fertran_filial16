@@ -215,7 +215,10 @@ def cavalo_list(request):
 @login_required
 @require_menu_perm('cavalos')
 def cavalo_detail(request, pk):
-    cavalo = get_object_or_404(Cavalo, pk=pk)
+    cavalo = get_object_or_404(
+        Cavalo.objects.select_related('proprietario', 'gestor', 'carreta', 'motorista').prefetch_related('documentos_extras'),
+        pk=pk
+    )
     logs = cavalo.logs.all()[:10]
     return render(request, 'core/cavalo_detail.html', {'cavalo': cavalo, 'logs': logs})
 
