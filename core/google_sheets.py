@@ -60,8 +60,8 @@ def _get_worksheet():
             logger.info(f"Aba '{worksheet_name}' não encontrada. Criando...")
             worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=13)
             headers = [
-                'PLACA', 'CARRETA', 'PLACA MG', 'CARRETA MG', 'MOTORISTA', 'CPF', 'TIPO', 'FLUXO',
-                'CLASSIFICAÇÃO', 'CÓDIGO DO PROPRIETÁRIO', 'TIPO DO PROPRIETÁRIO', 'PROPRIETÁRIO', 'SITUAÇÃO'
+                'Cavalo', 'Carreta', 'Motorista', 'Cavalo_MG', 'Carreta_MG', 'CPF', 'Tipo', 'Fluxo',
+                'Classificação', 'Codigo_parceiro', 'Tipo Parceiro', 'Parceiro', 'Situação'
             ]
             worksheet.update('A1:M1', [headers], value_input_option='RAW')
         return worksheet
@@ -234,19 +234,10 @@ def update_cavalo_in_sheets(cavalo_pk):
             return False
         row_num = _find_row_by_placa(worksheet, cavalo.placa)
         if row_num:
-            row_data_dict = _get_cavalo_row_data(cavalo)
-            try:
-                current_cols = worksheet.col_count
-                if current_cols < 13:
-                    worksheet.resize(rows=worksheet.row_count, cols=13)
-            except Exception:
-                pass
-            updates = [{'range': f'{col}{row_num}', 'values': [[value]]} for col, value in row_data_dict.items()]
-            worksheet.batch_update(updates, value_input_option='RAW')
-            logger.info(f"Cavalo {cavalo.placa} atualizado na linha {row_num} do Google Sheets")
-            return True
-        else:
-            return add_cavalo_to_sheets(cavalo_pk)
+            # Remove a linha atual e reinsere na posição correta (ordem: classificação, situação, fluxo, tipo, motorista)
+            worksheet.delete_rows(row_num)
+            logger.info(f"Cavalo {cavalo.placa} removido da linha {row_num} para reposicionar")
+        return add_cavalo_to_sheets(cavalo_pk)
     except Exception as e:
         logger.error(f"Erro ao atualizar cavalo no Google Sheets: {str(e)}", exc_info=True)
         return False
