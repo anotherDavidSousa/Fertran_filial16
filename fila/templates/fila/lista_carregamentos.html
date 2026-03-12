@@ -50,13 +50,17 @@
 {% block content %}
 <div class="page-hero page-hero-lista-carregamentos">
     <h1>Lista de Carregamentos</h1>
-    <p class="description">OSTs processadas (extraídas do processador de PDFs).</p>
+    <p class="description">OSTs e CT-es processados (extraídos do processador de PDFs).</p>
 </div>
 
 <div class="cards-row manifestados-cards-row">
     <div class="card-summary card-archived">
         <span class="label">Total OSTs</span>
         <span class="value">{{ total_osts }}</span>
+    </div>
+    <div class="card-summary card-archived">
+        <span class="label">Total CT-es</span>
+        <span class="value">{{ total_ctes }}</span>
     </div>
     <div class="card-summary card-filtrado">
         <span class="label">Exibindo</span>

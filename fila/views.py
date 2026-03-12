@@ -335,15 +335,73 @@ def arquivados_view(request):
     return render(request, 'fila/arquivados.html', context)
 
 
+def _lista_carregamentos_item_ost(ost):
+    """Converte OST em item unificado para a tabela Lista de carregamentos."""
+    from django.urls import reverse
+    doc = ' / '.join(filter(None, [ost.filial or '', ost.serie or '', ost.documento or '']))
+    if not doc:
+        doc = '—'
+    if ost.data_manifesto:
+        data_display = ost.data_manifesto.strftime('%d/%m/%Y')
+        if ost.hora_manifesto:
+            data_display += ' ' + ost.hora_manifesto.strftime('%H:%M')
+    else:
+        data_display = ost.criado_em.strftime('%d/%m/%Y %H:%M') if ost.criado_em else '—'
+    nf_display = ', '.join(str(x) for x in (ost.nota_fiscal or [])) if ost.nota_fiscal else '—'
+    sort_date = ost.data_manifesto or (ost.criado_em.date() if ost.criado_em else None)
+    sort_time = ost.hora_manifesto or (ost.criado_em.time() if ost.criado_em else None)
+    return {
+        'documento_display': doc,
+        'data_display': data_display,
+        'remetente': ost.remetente or '—',
+        'destinatario': ost.destinatario or '—',
+        'nota_fiscal_display': nf_display,
+        'motorista': ost.motorista or '—',
+        'placa_cavalo': ost.placa_cavalo or '—',
+        'placa_carreta': ost.placa_carreta or '—',
+        'produto_display': ost.produto or '—',
+        'peso_display': ost.peso or '—',
+        'tem_pdf': bool(ost.pdf_storage_key),
+        'pdf_url': reverse('ost_download_pdf', args=[ost.pk]) + '?inline=1' if ost.pdf_storage_key else None,
+        'sort_key': (sort_date, sort_time),
+    }
+
+
+def _lista_carregamentos_item_cte(cte):
+    """Converte CTe em item unificado para a tabela Lista de carregamentos."""
+    from django.urls import reverse
+    doc = ' / '.join(filter(None, [cte.filial or '', cte.serie or '', cte.numero_cte or '']))
+    if not doc:
+        doc = '—'
+    if cte.data_emissao:
+        data_display = cte.data_emissao.strftime('%d/%m/%Y')
+        if cte.hora_emissao:
+            data_display += ' ' + cte.hora_emissao.strftime('%H:%M')
+    else:
+        data_display = cte.criado_em.strftime('%d/%m/%Y %H:%M') if cte.criado_em else '—'
+    sort_date = cte.data_emissao or (cte.criado_em.date() if cte.criado_em else None)
+    sort_time = cte.hora_emissao or (cte.criado_em.time() if cte.criado_em else None)
+    return {
+        'documento_display': doc,
+        'data_display': data_display,
+        'remetente': cte.remetente or '—',
+        'destinatario': cte.destinatario or '—',
+        'nota_fiscal_display': cte.nota_fiscal or '—',
+        'motorista': cte.motorista or '—',
+        'placa_cavalo': cte.placa_cavalo or '—',
+        'placa_carreta': cte.placa_carreta or '—',
+        'produto_display': cte.produto_predominante or '—',
+        'peso_display': cte.peso_bruto or '—',
+        'tem_pdf': bool(cte.pdf_storage_key),
+        'pdf_url': reverse('cte_download_pdf', args=[cte.pk]) + '?inline=1' if cte.pdf_storage_key else None,
+        'sort_key': (sort_date, sort_time),
+    }
+
+
 @login_required
 @require_menu_perm('fila')
 def lista_carregamentos_view(request):
-    """Lista de OSTs processadas (lista de carregamentos) com os mesmos filtros do Manifestados."""
-    # Só exibe OSTs que possuem conteúdo na coluna Documento (filial/série/documento)
-    qs = OST.objects.filter(
-        Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt='')
-    ).order_by('-data_manifesto', '-criado_em')
-
+    """Lista de OSTs e CT-es processados na mesma tabela (mesmos filtros)."""
     data_inicio = _parse_date(request.GET.get('data_inicio'))
     data_fim = _parse_date(request.GET.get('data_fim'))
     motorista = (request.GET.get('motorista') or '').strip()
@@ -353,22 +411,26 @@ def lista_carregamentos_view(request):
     nota_fiscal_raw = (request.GET.get('nota_fiscal') or '').strip()
     notas_fiscais = [x.strip() for x in nota_fiscal_raw.split(',') if x.strip()]
 
+    # OSTs
+    qs_ost = OST.objects.filter(
+        Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt='')
+    )
     if data_inicio:
-        qs = qs.filter(
+        qs_ost = qs_ost.filter(
             Q(data_manifesto__gte=data_inicio) | Q(data_manifesto__isnull=True, criado_em__date__gte=data_inicio)
         )
     if data_fim:
-        qs = qs.filter(
+        qs_ost = qs_ost.filter(
             Q(data_manifesto__lte=data_fim) | Q(data_manifesto__isnull=True, criado_em__date__lte=data_fim)
         )
     if motorista:
-        qs = qs.filter(motorista__icontains=motorista)
+        qs_ost = qs_ost.filter(motorista__icontains=motorista)
     if placa:
-        qs = qs.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
+        qs_ost = qs_ost.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
     if remetente:
-        qs = qs.filter(remetente__icontains=remetente)
+        qs_ost = qs_ost.filter(remetente__icontains=remetente)
     if destinatario:
-        qs = qs.filter(destinatario__icontains=destinatario)
+        qs_ost = qs_ost.filter(destinatario__icontains=destinatario)
     if notas_fiscais:
         q_nf = Q()
         for nf in notas_fiscais:
@@ -377,17 +439,64 @@ def lista_carregamentos_view(request):
                 q_nf |= Q(nota_fiscal__contains=[int(nf)])
             except ValueError:
                 pass
-        qs = qs.filter(q_nf)
+        qs_ost = qs_ost.filter(q_nf)
+
+    # CT-es
+    qs_cte = CTe.objects.filter(
+        Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt='')
+    )
+    if data_inicio:
+        qs_cte = qs_cte.filter(
+            Q(data_emissao__gte=data_inicio) | Q(data_emissao__isnull=True, criado_em__date__gte=data_inicio)
+        )
+    if data_fim:
+        qs_cte = qs_cte.filter(
+            Q(data_emissao__lte=data_fim) | Q(data_emissao__isnull=True, criado_em__date__lte=data_fim)
+        )
+    if motorista:
+        qs_cte = qs_cte.filter(motorista__icontains=motorista)
+    if placa:
+        qs_cte = qs_cte.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
+    if remetente:
+        qs_cte = qs_cte.filter(remetente__icontains=remetente)
+    if destinatario:
+        qs_cte = qs_cte.filter(destinatario__icontains=destinatario)
+    if notas_fiscais:
+        q_nf_cte = Q()
+        for nf in notas_fiscais:
+            q_nf_cte |= Q(nota_fiscal__icontains=nf)
+        qs_cte = qs_cte.filter(q_nf_cte)
+
+    itens_raw = []
+    for ost in qs_ost:
+        itens_raw.append(_lista_carregamentos_item_ost(ost))
+    for cte in qs_cte:
+        itens_raw.append(_lista_carregamentos_item_cte(cte))
+
+    # Ordenar por data/hora (mais recente primeiro)
+    def _sort_key(x):
+        d, t = x['sort_key']
+        if d is None:
+            return (1, 0, 0)
+        secs = (t.hour * 3600 + t.minute * 60 + t.second) if t else 0
+        return (0, -d.toordinal(), -secs)
+
+    itens = sorted(itens_raw, key=_sort_key)
+    for d in itens:
+        d.pop('sort_key', None)
 
     total_osts = OST.objects.filter(
         Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt='')
     ).count()
-    total_filtrado = qs.count()
-    itens = qs
+    total_ctes = CTe.objects.filter(
+        Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt='')
+    ).count()
+    total_filtrado = len(itens)
 
     context = {
         'itens': itens,
         'total_osts': total_osts,
+        'total_ctes': total_ctes,
         'total_filtrado': total_filtrado,
         'filtros': {
             'data_inicio': request.GET.get('data_inicio') or '',
