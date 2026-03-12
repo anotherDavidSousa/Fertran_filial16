@@ -42,7 +42,7 @@
     <div class="form-group">
       <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">
-      {% if motorista and motorista.documento %}<span class="form-text">Atual: <a href="{{ motorista.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+      {% if motorista and motorista.documento %}<span class="form-text">Atual: <a href="{% url 'core:motorista_download_documento' motorista.pk %}?inline=1" target="_blank">Ver documento</a></span>{% endif %}
     </div>
     <div class="form-group">
       <label for="documentos_extras">Outros documentos</label>
@@ -50,7 +50,7 @@
       {% if motorista and motorista.documentos_extras.all %}
       <span class="form-text">Atuais:
         {% for doc in motorista.documentos_extras.all %}
-          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+          <a href="{% url 'core:motorista_download_documento_extra' doc.pk %}?inline=1" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </span>
       {% endif %}

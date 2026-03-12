@@ -71,7 +71,7 @@
       </div>
       <div class="detail-info-item">
         <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></div>
-        <div><div class="label">Documento</div><div class="value">{% if cavalo.documento %}<a href="{{ cavalo.documento.url }}" target="_blank">Ver</a>{% else %}-{% endif %}</div></div>
+        <div><div class="label">Documento</div><div class="value">{% if cavalo.documento %}<a href="{% url 'core:cavalo_download_documento' cavalo.pk %}?inline=1" target="_blank">Ver</a>{% else %}-{% endif %}</div></div>
       </div>
       <div class="detail-info-item" style="grid-column: span 2;">
         <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M16 13H8M16 17H8M10 9H8"/></svg></div>
@@ -92,8 +92,8 @@
         </div>
         {% if cavalo.documento %}
         <div class="doc-actions">
-          <a href="{{ cavalo.documento.url }}" target="_blank" class="btn-doc">Visualizar</a>
-          <a href="{{ cavalo.documento.url }}" download class="btn-doc">Download</a>
+          <a href="{% url 'core:cavalo_download_documento' cavalo.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
+          <a href="{% url 'core:cavalo_download_documento' cavalo.pk %}" class="btn-doc">Download</a>
         </div>
         {% endif %}
       </div>
@@ -107,8 +107,8 @@
           </div>
         </div>
         <div class="doc-actions">
-          <a href="{{ cavalo.motorista.documento.url }}" target="_blank" class="btn-doc">Visualizar</a>
-          <a href="{{ cavalo.motorista.documento.url }}" download class="btn-doc">Download</a>
+          <a href="{% url 'core:motorista_download_documento' cavalo.motorista.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
+          <a href="{% url 'core:motorista_download_documento' cavalo.motorista.pk %}" class="btn-doc">Download</a>
         </div>
       </div>
       {% endif %}
@@ -122,8 +122,8 @@
           </div>
         </div>
         <div class="doc-actions">
-          <a href="{{ doc.arquivo.url }}" target="_blank" class="btn-doc">Visualizar</a>
-          <a href="{{ doc.arquivo.url }}" download class="btn-doc">Download</a>
+          <a href="{% url 'core:cavalo_download_documento_extra' doc.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
+          <a href="{% url 'core:cavalo_download_documento_extra' doc.pk %}" class="btn-doc">Download</a>
         </div>
       </div>
       {% endfor %}

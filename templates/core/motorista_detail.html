@@ -29,7 +29,7 @@
 {% if motorista.documento %}
 <div class="panel-detail">
   <div class="panel-title">Documento</div>
-  <a href="{{ motorista.documento.url }}" target="_blank" class="btn-core btn-core-primary">Baixar documento</a>
+  <a href="{% url 'core:motorista_download_documento' motorista.pk %}?inline=1" target="_blank" class="btn-core btn-core-primary">Baixar documento</a>
 </div>
 {% endif %}
 {% endblock %}

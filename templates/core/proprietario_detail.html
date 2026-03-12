@@ -16,7 +16,7 @@
   <p class="card-line"><span class="card-field">Código:</span> {% if proprietario.codigo %}<span class="badge-core badge-core-info">{{ proprietario.codigo }}</span>{% else %}-{% endif %}</p>
   <p class="card-line"><span class="card-field">Nome/Razão Social:</span> {{ proprietario.nome_razao_social|default:"-" }}</p>
   <p class="card-line"><span class="card-field">Tipo:</span> {{ proprietario.get_tipo_display|default:"-" }}</p>
-  <p class="card-line"><span class="card-field">Documento:</span> {% if proprietario.documento %}<a href="{{ proprietario.documento.url }}" target="_blank">Ver documento</a>{% else %}-{% endif %}</p>
+  <p class="card-line"><span class="card-field">Documento:</span> {% if proprietario.documento %}<a href="{% url 'core:proprietario_download_documento' proprietario.pk %}?inline=1" target="_blank">Ver documento</a>{% else %}-{% endif %}</p>
   <p class="card-line"><span class="card-field">Observações:</span> {{ proprietario.observacoes|default:"-" }}</p>
 </div>
 {% if cavalos %}

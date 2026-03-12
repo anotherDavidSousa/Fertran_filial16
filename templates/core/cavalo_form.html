@@ -99,7 +99,7 @@
       {% if cavalo and cavalo.documentos_extras.all %}
       <span class="form-text">Atuais:
         {% for doc in cavalo.documentos_extras.all %}
-          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+          <a href="{% url 'core:cavalo_download_documento_extra' doc.pk %}?inline=1" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </span>
       {% endif %}

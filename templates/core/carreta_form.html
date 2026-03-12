@@ -102,7 +102,7 @@
       {% if carreta and carreta.documentos_extras.all %}
       <span class="form-text">Atuais:
         {% for doc in carreta.documentos_extras.all %}
-          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+          <a href="{% url 'core:carreta_download_documento_extra' doc.pk %}?inline=1" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </span>
       {% endif %}

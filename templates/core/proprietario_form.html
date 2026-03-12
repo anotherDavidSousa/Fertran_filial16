@@ -41,7 +41,7 @@
     <div class="form-group">
       <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">
-      {% if proprietario and proprietario.documento %}<span class="form-text">Atual: <a href="{{ proprietario.documento.url }}" target="_blank">Ver documento</a></span>{% endif %}
+      {% if proprietario and proprietario.documento %}<span class="form-text">Atual: <a href="{% url 'core:proprietario_download_documento' proprietario.pk %}?inline=1" target="_blank">Ver documento</a></span>{% endif %}
     </div>
     <div class="form-group">
       <label for="documentos_extras">Outros documentos</label>
@@ -49,7 +49,7 @@
       {% if proprietario and proprietario.documentos_extras.all %}
       <span class="form-text">Atuais:
         {% for doc in proprietario.documentos_extras.all %}
-          <a href="{{ doc.arquivo.url }}" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
+          <a href="{% url 'core:proprietario_download_documento_extra' doc.pk %}?inline=1" target="_blank">Doc {{ forloop.counter }}</a>{% if not forloop.last %}, {% endif %}
         {% endfor %}
       </span>
       {% endif %}

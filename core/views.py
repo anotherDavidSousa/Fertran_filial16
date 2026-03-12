@@ -9,6 +9,9 @@ from django.contrib import messages
 from datetime import datetime, date
 from decimal import Decimal
 from calendar import monthrange
+from django.http import FileResponse, Http404
+from django.core.files.storage import default_storage
+import os
 
 from .models import (
     Proprietario,
@@ -23,6 +26,25 @@ from .models import (
     ProprietarioDocumento,
     MotoristaDocumento,
 )
+
+
+def _abrir_arquivo_storage_or_404(key: str):
+    """Abre um arquivo salvo no storage padrão (MinIO) ou gera 404."""
+    if not key:
+        raise Http404('Arquivo não encontrado.')
+    if not default_storage.exists(key):
+        raise Http404('Arquivo não encontrado.')
+    return default_storage.open(key, 'rb')
+
+
+def _file_response_from_storage(key: str, filename_base: str, request):
+    f = _abrir_arquivo_storage_or_404(key)
+    filename = filename_base or os.path.basename(key) or 'arquivo.pdf'
+    inline = request.GET.get('inline') in ('1', 'true', 'yes')
+    response = FileResponse(f, as_attachment=not inline, filename=filename)
+    if inline:
+        response['Content-Disposition'] = f'inline; filename=\"{filename}\"'
+    return response
 
 
 @login_required
@@ -98,6 +120,28 @@ def proprietario_detail(request, pk):
     proprietario = get_object_or_404(Proprietario, pk=pk)
     cavalos = proprietario.cavalos.all()
     return render(request, 'core/proprietario_detail.html', {'proprietario': proprietario, 'cavalos': cavalos})
+
+
+@login_required
+@require_menu_perm('agregamento')
+def proprietario_download_documento(request, pk):
+    proprietario = get_object_or_404(Proprietario, pk=pk)
+    if not proprietario.documento:
+        raise Http404('Documento não encontrado.')
+    key = proprietario.documento.name
+    filename_base = f'proprietario_{proprietario.codigo or proprietario.pk}.pdf'
+    return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def proprietario_download_documento_extra(request, pk):
+    doc = get_object_or_404(ProprietarioDocumento, pk=pk)
+    if not doc.arquivo:
+        raise Http404('Documento não encontrado.')
+    key = doc.arquivo.name
+    filename_base = os.path.basename(key)
+    return _file_response_from_storage(key, filename_base, request)
 
 
 @login_required
@@ -221,6 +265,28 @@ def cavalo_detail(request, pk):
     )
     logs = cavalo.logs.all()[:10]
     return render(request, 'core/cavalo_detail.html', {'cavalo': cavalo, 'logs': logs})
+
+
+@login_required
+@require_menu_perm('cavalos')
+def cavalo_download_documento(request, pk):
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    if not cavalo.documento:
+        raise Http404('Documento não encontrado.')
+    key = cavalo.documento.name
+    filename_base = f'cavalo_{cavalo.placa or cavalo.pk}.pdf'
+    return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def cavalo_download_documento_extra(request, pk):
+    doc = get_object_or_404(CavaloDocumento, pk=pk)
+    if not doc.arquivo:
+        raise Http404('Documento não encontrado.')
+    key = doc.arquivo.name
+    filename_base = os.path.basename(key)
+    return _file_response_from_storage(key, filename_base, request)
 
 
 def _cavalo_form_context(cavalo=None, form_type='create'):
@@ -391,6 +457,28 @@ def carreta_detail(request, pk):
 
 @login_required
 @require_menu_perm('agregamento')
+def carreta_download_documento(request, pk):
+    carreta = get_object_or_404(Carreta, pk=pk)
+    if not carreta.documento:
+        raise Http404('Documento não encontrado.')
+    key = carreta.documento.name
+    filename_base = f'carreta_{carreta.placa or carreta.pk}.pdf'
+    return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def carreta_download_documento_extra(request, pk):
+    doc = get_object_or_404(CarretaDocumento, pk=pk)
+    if not doc.arquivo:
+        raise Http404('Documento não encontrado.')
+    key = doc.arquivo.name
+    filename_base = os.path.basename(key)
+    return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('agregamento')
 def carreta_create(request):
     if request.method == 'POST':
         ultima_lavagem_str = request.POST.get('ultima_lavagem', '').strip()
@@ -481,6 +569,28 @@ def motorista_list(request):
 def motorista_detail(request, pk):
     motorista = get_object_or_404(Motorista.objects.select_related('cavalo', 'cavalo__carreta'), pk=pk)
     return render(request, 'core/motorista_detail.html', {'motorista': motorista})
+
+
+@login_required
+@require_menu_perm('agregamento')
+def motorista_download_documento(request, pk):
+    motorista = get_object_or_404(Motorista, pk=pk)
+    if not motorista.documento:
+        raise Http404('Documento não encontrado.')
+    key = motorista.documento.name
+    filename_base = f'motorista_{motorista.nome or motorista.pk}.pdf'
+    return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def motorista_download_documento_extra(request, pk):
+    doc = get_object_or_404(MotoristaDocumento, pk=pk)
+    if not doc.arquivo:
+        raise Http404('Documento não encontrado.')
+    key = doc.arquivo.name
+    filename_base = os.path.basename(key)
+    return _file_response_from_storage(key, filename_base, request)
 
 
 @login_required
