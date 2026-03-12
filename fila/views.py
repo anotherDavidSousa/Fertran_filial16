@@ -665,6 +665,13 @@ def _encontrar_ost_existente(filial, serie, documento, nota_fiscal):
     return None
 
 
+def _normalizar_placa(placa):
+    """Remove hífen da placa para salvar no banco (ex.: ABC-1234 -> ABC1234)."""
+    if not placa or not isinstance(placa, str):
+        return (placa or '')[:10]
+    return placa.replace('-', '').strip()[:10]
+
+
 def _dados_cte_para_model(d):
     """Converte um dicionário do extrator CT-e para atributos do model CTe."""
     def _trunc(s, n):
@@ -690,8 +697,8 @@ def _dados_cte_para_model(d):
         'chave_nfe': _trunc(d.get('chave_nfe'), 44),
         'dt': _trunc(d.get('dt'), 100),
         'cnpj_proprietario': _trunc(d.get('cnpj_proprietario'), 30),
-        'placa_cavalo': _trunc(d.get('placa_cavalo'), 10),
-        'placa_carreta': _trunc(d.get('placa_carreta'), 10),
+        'placa_cavalo': _normalizar_placa(d.get('placa_cavalo')),
+        'placa_carreta': _normalizar_placa(d.get('placa_carreta')),
         'motorista': _trunc(d.get('motorista'), 200),
     }
 
