@@ -382,7 +382,10 @@ def carreta_list(request):
 @login_required
 @require_menu_perm('agregamento')
 def carreta_detail(request, pk):
-    carreta = get_object_or_404(Carreta, pk=pk)
+    carreta = get_object_or_404(
+        Carreta.objects.prefetch_related('documentos_extras'),
+        pk=pk
+    )
     return render(request, 'core/carreta_detail.html', {'carreta': carreta})
 
 

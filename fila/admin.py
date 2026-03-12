@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Carregamento, OST
+from .models import Carregamento, OST, CTe
 
 
 @admin.register(Carregamento)
@@ -49,6 +49,27 @@ class OSTAdmin(admin.ModelAdmin):
         return obj.carregamentos.exists()
     tem_carregamento.boolean = True
     tem_carregamento.short_description = 'Vinculado'
+
+    def tem_pdf(self, obj):
+        return bool(obj.pdf_storage_key)
+    tem_pdf.boolean = True
+    tem_pdf.short_description = 'PDF'
+
+
+@admin.register(CTe)
+class CTeAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'filial', 'serie', 'numero_cte', 'data_emissao', 'remetente', 'destinatario',
+        'valor_total', 'placa_cavalo', 'motorista', 'nota_fiscal', 'tem_pdf', 'criado_em',
+    )
+    list_filter = ('data_emissao', 'criado_em')
+    search_fields = (
+        'filial', 'serie', 'numero_cte', 'remetente', 'destinatario', 'motorista',
+        'nota_fiscal', 'chave_nfe', 'placa_cavalo', 'placa_carreta',
+    )
+    readonly_fields = ('criado_em', 'pdf_storage_key')
+    date_hierarchy = 'data_emissao'
+    list_per_page = 50
 
     def tem_pdf(self, obj):
         return bool(obj.pdf_storage_key)

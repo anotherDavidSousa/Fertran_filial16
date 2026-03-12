@@ -25,10 +25,10 @@
             <input type="file" id="id_pdf_geral" name="pdf_geral" accept=".pdf">
             <span class="upload-hint">Opcional</span>
         </div>
-        <div class="upload-group">
-            <label for="id_cte_pdf">CT-e</label>
+        <div class="upload-group upload-group-cte">
+            <label for="id_cte_pdf">CT-e (Conhecimento de Transporte Eletrônico)</label>
             <input type="file" id="id_cte_pdf" name="cte_pdf" accept=".pdf">
-            <span class="upload-hint">Opcional</span>
+            <span class="upload-hint">PDF único ou várias páginas (1 página = 1 CT-e). Processado e importado para o banco; PDFs no MinIO (ctes/).</span>
         </div>
         <div class="upload-group upload-group-ost">
             <label for="id_ost_pdf">OST (Ordem de Serviço de Transporte)</label>
@@ -60,7 +60,8 @@
 .upload-group label { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); }
 .upload-group input[type="file"] { padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-page); color: var(--text-primary); font: inherit; }
 .upload-hint { font-size: 0.8rem; color: var(--text-secondary); }
-.upload-group-ost { padding: 0.75rem; background: var(--accent-muted); border-radius: 10px; border: 1px solid var(--border); }
+.upload-group-ost,
+.upload-group-cte { padding: 0.75rem; background: var(--accent-muted); border-radius: 10px; border: 1px solid var(--border); }
 .processador-actions { margin-top: 1rem; }
 .btn-processador { padding: 0.6rem 1.25rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
 .btn-processador:hover { background: var(--accent-hover); }

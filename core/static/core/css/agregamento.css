@@ -77,3 +77,106 @@
 .pagination-core span { padding: 0.4rem 0.75rem; border-radius: 6px; background: var(--border); color: var(--text-primary); text-decoration: none; font-size: 0.9rem; }
 .pagination-core a:hover { background: var(--accent-muted); color: var(--accent); }
 .pagination-core .disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Páginas de detalhe (cavalo / carreta) - layout hero + grid + documentos */
+.detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.detail-hero-left { flex: 1; min-width: 200px; }
+.detail-hero-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.detail-hero-left h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.25rem 0; }
+.detail-hero-left .description { color: var(--text-secondary); font-size: 0.95rem; margin: 0 0 1rem 0; }
+.detail-hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.detail-hero-right { flex-shrink: 0; width: 280px; max-width: 100%; }
+.detail-hero-right img {
+  width: 100%; height: auto; max-height: 200px;
+  object-fit: contain; border-radius: 10px; background: var(--bg-page);
+}
+.detail-hero-placeholder {
+  height: 160px; background: var(--bg-page); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); font-size: 0.9rem;
+}
+.detail-row {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 900px) { .detail-row { grid-template-columns: 1fr; } }
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 600px) { .detail-info-grid { grid-template-columns: repeat(2, 1fr); } }
+.detail-info-item {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.detail-info-item .icon-wrap {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-muted); color: var(--accent);
+  border-radius: 8px;
+}
+.detail-info-item .icon-wrap svg { width: 20px; height: 20px; }
+.detail-info-item .label { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.2rem; }
+.detail-info-item .value { font-size: 0.9rem; font-weight: 500; color: var(--text-primary); }
+.detail-info-item .value a { color: var(--accent); text-decoration: none; }
+.detail-info-item .value a:hover { text-decoration: underline; }
+.detail-docs-panel .panel-title { margin-bottom: 1rem; }
+.detail-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+.detail-doc-item:last-child { margin-bottom: 0; }
+.detail-doc-item .doc-info { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.detail-doc-item .doc-info .icon-doc {
+  flex-shrink: 0; width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-muted); color: var(--accent); border-radius: 8px;
+}
+.detail-doc-item .doc-info .icon-doc svg { width: 20px; height: 20px; }
+.detail-doc-item .doc-title { font-weight: 600; font-size: 0.9rem; }
+.detail-doc-item .doc-status { font-size: 0.8rem; color: var(--text-secondary); }
+.detail-doc-item .doc-status.status-ok { color: var(--success); }
+.detail-doc-item .doc-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.detail-doc-item .btn-doc {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500;
+  text-decoration: none; border: 1px solid var(--accent);
+  background: var(--bg-card); color: var(--accent); cursor: pointer;
+}
+.detail-doc-item .btn-doc:hover {
+  background: var(--accent-muted); color: var(--accent); text-decoration: none;
+}

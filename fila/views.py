@@ -8,8 +8,9 @@ from django.contrib.auth import logout
 from .menu_perms import require_menu_perm
 from django.core.files.storage import default_storage
 from django.contrib import messages
-from .models import Carregamento, OST
+from .models import Carregamento, OST, CTe
 from .ost_extractor import ExtratorOST
+from .processador_cte import ExtratorCTe
 import json
 import re
 import unicodedata
@@ -426,6 +427,31 @@ def ost_download_pdf(request, pk):
         raise
 
 
+@login_required
+@require_menu_perm('fila')
+@require_GET
+def cte_download_pdf(request, pk):
+    """Download do PDF do CT-e por pk do CTe. ?inline=1 para abrir no navegador."""
+    cte = get_object_or_404(CTe, pk=pk)
+    if not cte.pdf_storage_key or not default_storage.exists(cte.pdf_storage_key):
+        raise Http404('PDF deste CT-e não encontrado.')
+    f = default_storage.open(cte.pdf_storage_key, 'rb')
+    filial = cte.filial or ''
+    serie = cte.serie or ''
+    num = cte.numero_cte or ''
+    filename = f'cte_{filial}_{serie}_{num}.pdf'.strip('_') or 'cte.pdf'
+    inline = request.GET.get('inline') in ('1', 'true', 'yes')
+    try:
+        response = FileResponse(f, as_attachment=not inline, filename=filename)
+        if inline:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception:
+        if hasattr(f, 'close'):
+            f.close()
+        raise
+
+
 def esqueci_senha_view(request):
     """Página 'Esqueceu a senha' – orienta a contactar o administrador."""
     return render(request, 'fila/esqueci_senha.html')
@@ -522,13 +548,65 @@ def _encontrar_ost_existente(filial, serie, documento, nota_fiscal):
     if not documento and not (filial or serie):
         return None
     qs = OST.objects.filter(filial=filial or '', serie=serie or '', documento=documento or '')
-    # Comparar lista de nota fiscal (ordem normalizada para match)
     nf_norm = sorted(str(x) for x in (nota_fiscal or []))
     for ost in qs:
         ost_nf = sorted(str(x) for x in (ost.nota_fiscal or []))
         if ost_nf == nf_norm:
             return ost
     return None
+
+
+def _dados_cte_para_model(d):
+    """Converte um dicionário do extrator CT-e para atributos do model CTe."""
+    def _trunc(s, n):
+        return (s or '')[:n] if s else ''
+    return {
+        'filial': _trunc(d.get('filial'), 20),
+        'serie': _trunc(d.get('serie'), 20),
+        'numero_cte': _trunc(d.get('numero_cte'), 50),
+        'data_emissao': _parse_data_manifesto(d.get('data_emissao')),
+        'hora_emissao': _parse_hora_manifesto(d.get('hora_emissao')),
+        'remetente': _trunc(d.get('remetente'), 500),
+        'municipio_remetente': _trunc(d.get('municipio_remetente'), 200),
+        'destinatario': _trunc(d.get('destinatario'), 500),
+        'municipio_destinatario': _trunc(d.get('municipio_destinatario'), 200),
+        'produto_predominante': _trunc(d.get('produto_predominante'), 500),
+        'vlr_tarifa': _trunc(d.get('vlr_tarifa'), 50),
+        'peso_bruto': _trunc(d.get('peso_bruto'), 50),
+        'frete_peso': _trunc(d.get('frete_peso'), 50),
+        'pedagio': _trunc(d.get('pedagio'), 50),
+        'valor_total': _trunc(d.get('valor_total'), 50),
+        'serie_nf': _trunc(d.get('serie_nf'), 20),
+        'nota_fiscal': _trunc(d.get('nota_fiscal'), 50),
+        'chave_nfe': _trunc(d.get('chave_nfe'), 44),
+        'dt': _trunc(d.get('dt'), 100),
+        'cnpj_proprietario': _trunc(d.get('cnpj_proprietario'), 30),
+        'placa_cavalo': _trunc(d.get('placa_cavalo'), 10),
+        'placa_carreta': _trunc(d.get('placa_carreta'), 10),
+        'motorista': _trunc(d.get('motorista'), 200),
+    }
+
+
+def _demembrar_e_enviar_pagina_minio_cte(content: bytes, page_index: int, upload_id: str) -> str:
+    """Gera PDF de uma única página e salva no MinIO (pasta ctes/). Retorna a chave do objeto."""
+    reader = PdfReader(BytesIO(content))
+    writer = PdfWriter()
+    writer.add_page(reader.pages[page_index])
+    buf = BytesIO()
+    writer.write(buf)
+    buf.seek(0)
+    key = f'ctes/{upload_id}/{page_index}.pdf'
+    default_storage.save(key, buf)
+    return key
+
+
+def _encontrar_cte_existente(filial, serie, numero_cte):
+    """Retorna CTe existente com mesmo filial/série/numero_cte, ou None."""
+    if not (filial or serie or numero_cte):
+        return None
+    return CTe.objects.filter(
+        filial=filial or '', serie=serie or '', numero_cte=numero_cte or ''
+    ).first()
 
 
 @login_required
@@ -538,11 +616,12 @@ def processador_view(request):
     Anti-duplicata: mesmo documento + mesma nota fiscal não cria novo registro; se já existir OST com PDF, não sobrescreve.
     Se existir OST sem PDF, atualiza com o PDF e dados extraídos."""
     if request.method == 'POST':
+        if (request.FILES.get('ost_pdf') or request.FILES.get('cte_pdf')) and (not PdfReader or not PdfWriter):
+            messages.error(request, 'Biblioteca pypdf não disponível para demembrar os PDFs.')
+            return redirect('processador')
+
         ost_file = request.FILES.get('ost_pdf')
         if ost_file and ost_file.name.lower().endswith('.pdf'):
-            if not PdfReader or not PdfWriter:
-                messages.error(request, 'Biblioteca pypdf não disponível para demembrar o PDF.')
-                return redirect('processador')
             try:
                 content = b''.join(ost_file.chunks())
                 upload_id = uuid.uuid4().hex
@@ -576,11 +655,55 @@ def processador_view(request):
                     partes.append(f'{atualizados} atualizado(s) com PDF')
                 if ignorados_duplicata:
                     partes.append(f'{ignorados_duplicata} duplicata(s) ignorada(s)')
-                msg = f'OST processado: {"; ".join(partes)}. PDFs no MinIO (ost/{upload_id}/).' if partes else f'Nenhum registro novo. {ignorados_duplicata} duplicata(s) ignorada(s). PDFs em ost/{upload_id}/.'
+                msg = f'OST: {"; ".join(partes)}. PDFs em ost/{upload_id}/.' if partes else f'OST: nenhum registro novo. {ignorados_duplicata} duplicata(s). PDFs em ost/{upload_id}/.'
                 messages.success(request, msg)
             except Exception as e:
                 messages.error(request, f'Erro ao processar PDF OST: {e}')
         elif ost_file:
             messages.warning(request, 'Envie um arquivo PDF para OST.')
+
+        # --- CT-e ---
+        cte_file = request.FILES.get('cte_pdf')
+        if cte_file and cte_file.name.lower().endswith('.pdf'):
+            try:
+                content = b''.join(cte_file.chunks())
+                upload_id = uuid.uuid4().hex
+                extrator = ExtratorCTe(BytesIO(content))
+                criados = 0
+                atualizados = 0
+                ignorados_duplicata = 0
+                for page_index, records in extrator.processar_pdf_por_pagina():
+                    key = _demembrar_e_enviar_pagina_minio_cte(content, page_index, upload_id)
+                    for d in records:
+                        attrs = _dados_cte_para_model(d)
+                        attrs['pdf_storage_key'] = key
+                        existente = _encontrar_cte_existente(
+                            attrs['filial'], attrs['serie'], attrs['numero_cte']
+                        )
+                        if existente:
+                            if existente.pdf_storage_key:
+                                ignorados_duplicata += 1
+                                continue
+                            for k, v in attrs.items():
+                                setattr(existente, k, v)
+                            existente.save()
+                            atualizados += 1
+                        else:
+                            CTe.objects.create(**attrs)
+                            criados += 1
+                partes = []
+                if criados:
+                    partes.append(f'{criados} criado(s)')
+                if atualizados:
+                    partes.append(f'{atualizados} atualizado(s) com PDF')
+                if ignorados_duplicata:
+                    partes.append(f'{ignorados_duplicata} duplicata(s) ignorada(s)')
+                msg = f'CT-e: {"; ".join(partes)}. PDFs em ctes/{upload_id}/.' if partes else f'CT-e: nenhum registro novo. {ignorados_duplicata} duplicata(s). PDFs em ctes/{upload_id}/.'
+                messages.success(request, msg)
+            except Exception as e:
+                messages.error(request, f'Erro ao processar PDF CT-e: {e}')
+        elif cte_file:
+            messages.warning(request, 'Envie um arquivo PDF para CT-e.')
+
         return redirect('processador')
     return render(request, 'fila/processador.html')

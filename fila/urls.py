@@ -12,6 +12,7 @@ urlpatterns = [
     path('manifestados/', views.arquivados_view, name='manifestados'),
     path('lista-carregamentos/', views.lista_carregamentos_view, name='lista_carregamentos'),
     path('ost/<int:pk>/download-pdf/', views.ost_download_pdf, name='ost_download_pdf'),
+    path('cte/<int:pk>/download-pdf/', views.cte_download_pdf, name='cte_download_pdf'),
     path('item/<int:pk>/', views.item_detail, name='item_detalhe'),
     path('item/<int:pk>/manifestar/', views.item_manifestar_view, name='manifestar'),
     path('item/<int:pk>/download-xml/', views.item_download_xml, name='download_xml'),
