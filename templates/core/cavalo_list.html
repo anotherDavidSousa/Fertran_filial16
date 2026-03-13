@@ -36,8 +36,11 @@ table.dataTable tbody td {
 #tabelaCavalos th.col-motorista, #tabelaCavalos td.col-motorista,
 #tabelaCavalos th.col-cpf, #tabelaCavalos td.col-cpf,
 #tabelaCavalos th.col-whatsapp, #tabelaCavalos td.col-whatsapp,
+#tabelaCavalos th.col-fluxo, #tabelaCavalos td.col-fluxo,
 #tabelaCavalos th.col-laudo, #tabelaCavalos td.col-laudo,
-#tabelaCavalos th.col-situacao, #tabelaCavalos td.col-situacao {
+#tabelaCavalos th.col-situacao, #tabelaCavalos td.col-situacao,
+#tabelaCavalos th.col-viagens, #tabelaCavalos td.col-viagens,
+#tabelaCavalos th.col-faturamento, #tabelaCavalos td.col-faturamento {
   white-space: nowrap;
   width: 1%;
 }
@@ -103,6 +106,8 @@ table.dataTable tbody td {
         <th class="col-fluxo">Fluxo</th>
         <th class="col-laudo">Laudo</th>
         <th class="col-situacao">Situação</th>
+        <th class="col-viagens">n° viagens</th>
+        <th class="col-faturamento">Faturamento</th>
         <th class="col-observacoes">Observações</th>
       </tr>
     </thead>
@@ -122,10 +127,12 @@ table.dataTable tbody td {
         <td class="col-fluxo">{% if cavalo.fluxo %}{{ cavalo.get_fluxo_display }}{% else %}-{% endif %}</td>
         <td class="col-laudo">{% if cavalo.emissao_laudo %}{{ cavalo.emissao_laudo|date:"d/m/Y" }}{% else %}-{% endif %}</td>
         <td class="col-situacao">{% if cavalo.situacao %}<span class="badge-core {% if cavalo.situacao == 'ativo' %}badge-core-success{% else %}badge-core-warning{% endif %}">{{ cavalo.get_situacao_display }}</span>{% else %}-{% endif %}</td>
+        <td class="col-viagens">-</td>
+        <td class="col-faturamento">-</td>
         <td class="col-observacoes">{{ cavalo.observacoes|default:"-" }}</td>
       </tr>
       {% empty %}
-      <tr><td colspan="14" style="text-align:center;color:var(--text-secondary);">Nenhum cavalo.</td></tr>
+      <tr><td colspan="16" style="text-align:center;color:var(--text-secondary);">Nenhum cavalo.</td></tr>
       {% endfor %}
     </tbody>
   </table>
