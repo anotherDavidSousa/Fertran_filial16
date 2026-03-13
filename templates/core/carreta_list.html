@@ -60,8 +60,9 @@ table.dataTable tbody td {
         <th>Tipo</th>
         <th>Cavalo</th>
         <th>Situação</th>
-        <th>Última Lavagem</th>
-        <th>Ações</th>
+        <th>Última lavagem</th>
+        <th>Emissão do laudo</th>
+        <th>Observações</th>
       </tr>
     </thead>
     <tbody>
@@ -74,10 +75,11 @@ table.dataTable tbody td {
         <td>{% with cavalo=carreta.get_cavalo %}{% if cavalo %}<a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa }}</a>{% else %}<span class="badge-core badge-core-success">Disponível</span>{% endif %}{% endwith %}</td>
         <td>{% if carreta.situacao == 'ativo' %}<span class="badge-core badge-core-success">Ativo</span>{% elif carreta.situacao == 'parado' %}<span class="badge-core badge-core-warning">Parado</span>{% else %}-{% endif %}</td>
         <td>{% if carreta.ultima_lavagem %}{{ carreta.ultima_lavagem|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-        <td><a href="{% url 'core:carreta_detail' carreta.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:carreta_edit' carreta.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
+        <td>{% if carreta.emissao_laudo %}{{ carreta.emissao_laudo|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+        <td>{{ carreta.observacoes|default:"-" }}</td>
       </tr>
       {% empty %}
-      <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);">Nenhuma carreta.</td></tr>
+      <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);">Nenhuma carreta.</td></tr>
       {% endfor %}
     </tbody>
   </table>

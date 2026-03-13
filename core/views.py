@@ -492,16 +492,15 @@ def cavalo_edit(request, pk):
 @login_required
 @require_menu_perm('agregamento')
 def carreta_list(request):
-    carretas = Carreta.objects.all()
+    # Apenas carretas de classificação Agregamento
+    carretas = Carreta.objects.filter(classificacao='agregado')
     disponivel_filter = request.GET.get('disponivel', '')
     carretas_acopladas_ids = Cavalo.objects.exclude(carreta__isnull=True).values_list('carreta_id', flat=True)
     if disponivel_filter == 'sim':
-        carretas = carretas.filter(
-            models.Q(classificacao='agregado') | models.Q(classificacao__isnull=True)
-        ).exclude(id__in=carretas_acopladas_ids)
+        carretas = carretas.exclude(id__in=carretas_acopladas_ids)
     elif disponivel_filter == 'nao':
         carretas = carretas.filter(id__in=carretas_acopladas_ids)
-    carretas_agregadas = Carreta.objects.filter(models.Q(classificacao='agregado') | models.Q(classificacao__isnull=True))
+    carretas_agregadas = Carreta.objects.filter(classificacao='agregado')
     return render(request, 'core/carreta_list.html', {
         'carretas': carretas,
         'disponivel_filter': disponivel_filter,
