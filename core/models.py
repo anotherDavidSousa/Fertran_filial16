@@ -1,3 +1,4 @@
+import os
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta, date
@@ -282,6 +283,10 @@ class CavaloDocumento(models.Model):
     def __str__(self):
         return self.arquivo.name
 
+    @property
+    def nome_arquivo(self):
+        return os.path.basename(self.arquivo.name) if self.arquivo and self.arquivo.name else ''
+
 
 class CarretaDocumento(models.Model):
     carreta = models.ForeignKey(Carreta, on_delete=models.CASCADE, related_name='documentos_extras')
@@ -294,6 +299,10 @@ class CarretaDocumento(models.Model):
 
     def __str__(self):
         return self.arquivo.name
+
+    @property
+    def nome_arquivo(self):
+        return os.path.basename(self.arquivo.name) if self.arquivo and self.arquivo.name else ''
 
 
 class ProprietarioDocumento(models.Model):
@@ -308,6 +317,10 @@ class ProprietarioDocumento(models.Model):
     def __str__(self):
         return self.arquivo.name
 
+    @property
+    def nome_arquivo(self):
+        return os.path.basename(self.arquivo.name) if self.arquivo and self.arquivo.name else ''
+
 
 class MotoristaDocumento(models.Model):
     motorista = models.ForeignKey(Motorista, on_delete=models.CASCADE, related_name='documentos_extras')
@@ -320,6 +333,10 @@ class MotoristaDocumento(models.Model):
 
     def __str__(self):
         return self.arquivo.name
+
+    @property
+    def nome_arquivo(self):
+        return os.path.basename(self.arquivo.name) if self.arquivo and self.arquivo.name else ''
 
 
 class LogCarreta(models.Model):

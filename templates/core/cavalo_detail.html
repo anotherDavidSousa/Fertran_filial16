@@ -94,6 +94,10 @@
         <div class="doc-actions">
           <a href="{% url 'core:cavalo_download_documento' cavalo.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
           <a href="{% url 'core:cavalo_download_documento' cavalo.pk %}" class="btn-doc">Download</a>
+          <form method="post" action="{% url 'core:cavalo_remover_documento' cavalo.pk %}" style="display:inline;" onsubmit="return confirm('Remover este documento do cavalo e excluir o arquivo do armazenamento?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-doc btn-doc-remover">Remover</button>
+          </form>
         </div>
         {% endif %}
       </div>
@@ -109,6 +113,11 @@
         <div class="doc-actions">
           <a href="{% url 'core:motorista_download_documento' cavalo.motorista.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
           <a href="{% url 'core:motorista_download_documento' cavalo.motorista.pk %}" class="btn-doc">Download</a>
+          <form method="post" action="{% url 'core:motorista_remover_documento' cavalo.motorista.pk %}" style="display:inline;" onsubmit="return confirm('Remover este documento do motorista e excluir o arquivo do armazenamento?');">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'core:cavalo_detail' cavalo.pk %}">
+            <button type="submit" class="btn-doc btn-doc-remover">Remover</button>
+          </form>
         </div>
       </div>
       {% endif %}
@@ -117,13 +126,17 @@
         <div class="doc-info">
           <div class="icon-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
           <div>
-            <div class="doc-title">Documento anexo {{ forloop.counter }}</div>
+            <div class="doc-title">{% if doc.nome_arquivo %}{{ doc.nome_arquivo }}{% else %}Documento anexo {{ forloop.counter }}{% endif %}</div>
             <div class="doc-status status-ok">Carregado</div>
           </div>
         </div>
         <div class="doc-actions">
           <a href="{% url 'core:cavalo_download_documento_extra' doc.pk %}?inline=1" target="_blank" class="btn-doc">Visualizar</a>
           <a href="{% url 'core:cavalo_download_documento_extra' doc.pk %}" class="btn-doc">Download</a>
+          <form method="post" action="{% url 'core:cavalo_remover_documento_extra' doc.pk %}" style="display:inline;" onsubmit="return confirm('Remover este documento e excluir o arquivo do armazenamento?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-doc btn-doc-remover">Remover</button>
+          </form>
         </div>
       </div>
       {% endfor %}

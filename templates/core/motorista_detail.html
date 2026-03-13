@@ -30,6 +30,10 @@
 <div class="panel-detail">
   <div class="panel-title">Documento</div>
   <a href="{% url 'core:motorista_download_documento' motorista.pk %}?inline=1" target="_blank" class="btn-core btn-core-primary">Baixar documento</a>
+  <form method="post" action="{% url 'core:motorista_remover_documento' motorista.pk %}" style="display:inline;margin-left:0.5rem;" onsubmit="return confirm('Remover este documento e excluir o arquivo do armazenamento?');">
+    {% csrf_token %}
+    <button type="submit" class="btn-core btn-core-secondary">Remover</button>
+  </form>
 </div>
 {% endif %}
 {% endblock %}

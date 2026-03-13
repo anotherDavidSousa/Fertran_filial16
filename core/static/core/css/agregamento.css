@@ -180,3 +180,9 @@
 .detail-doc-item .btn-doc:hover {
   background: var(--accent-muted); color: var(--accent); text-decoration: none;
 }
+.detail-doc-item .btn-doc-remover {
+  border-color: #c53030; color: #c53030; background: var(--bg-card);
+}
+.detail-doc-item .btn-doc-remover:hover {
+  background: #feb2b2; color: #742a2a;
+}

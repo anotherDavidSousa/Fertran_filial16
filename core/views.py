@@ -146,6 +146,39 @@ def proprietario_download_documento_extra(request, pk):
 
 @login_required
 @require_menu_perm('agregamento')
+def proprietario_remover_documento(request, pk):
+    if request.method != 'POST':
+        return redirect('core:proprietario_detail', pk=pk)
+    proprietario = get_object_or_404(Proprietario, pk=pk)
+    if proprietario.documento:
+        proprietario.documento.delete(save=True)
+        messages.success(request, 'Documento removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:proprietario_detail', pk=proprietario.pk)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def proprietario_remover_documento_extra(request, pk):
+    if request.method != 'POST':
+        doc = get_object_or_404(ProprietarioDocumento, pk=pk)
+        return redirect('core:proprietario_detail', pk=doc.proprietario_id)
+    doc = get_object_or_404(ProprietarioDocumento, pk=pk)
+    proprietario_pk = doc.proprietario_id
+    if doc.arquivo:
+        doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento anexado removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:proprietario_detail', pk=proprietario_pk)
+
+
+@login_required
+@require_menu_perm('agregamento')
 def proprietario_create(request):
     if request.method == 'POST':
         codigo = request.POST.get('codigo', '').strip() or None
@@ -287,6 +320,39 @@ def cavalo_download_documento_extra(request, pk):
     key = doc.arquivo.name
     filename_base = os.path.basename(key)
     return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def cavalo_remover_documento(request, pk):
+    if request.method != 'POST':
+        return redirect('core:cavalo_detail', pk=pk)
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    if cavalo.documento:
+        cavalo.documento.delete(save=True)
+        messages.success(request, 'Documento principal removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:cavalo_detail', pk=cavalo.pk)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def cavalo_remover_documento_extra(request, pk):
+    if request.method != 'POST':
+        doc = get_object_or_404(CavaloDocumento, pk=pk)
+        return redirect('core:cavalo_detail', pk=doc.cavalo_id)
+    doc = get_object_or_404(CavaloDocumento, pk=pk)
+    cavalo_pk = doc.cavalo_id
+    if doc.arquivo:
+        doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento anexado removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:cavalo_detail', pk=cavalo_pk)
 
 
 def _cavalo_form_context(cavalo=None, form_type='create'):
@@ -479,6 +545,39 @@ def carreta_download_documento_extra(request, pk):
 
 @login_required
 @require_menu_perm('agregamento')
+def carreta_remover_documento(request, pk):
+    if request.method != 'POST':
+        return redirect('core:carreta_detail', pk=pk)
+    carreta = get_object_or_404(Carreta, pk=pk)
+    if carreta.documento:
+        carreta.documento.delete(save=True)
+        messages.success(request, 'Documento principal removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:carreta_detail', pk=carreta.pk)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def carreta_remover_documento_extra(request, pk):
+    if request.method != 'POST':
+        doc = get_object_or_404(CarretaDocumento, pk=pk)
+        return redirect('core:carreta_detail', pk=doc.carreta_id)
+    doc = get_object_or_404(CarretaDocumento, pk=pk)
+    carreta_pk = doc.carreta_id
+    if doc.arquivo:
+        doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento anexado removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:carreta_detail', pk=carreta_pk)
+
+
+@login_required
+@require_menu_perm('agregamento')
 def carreta_create(request):
     if request.method == 'POST':
         ultima_lavagem_str = request.POST.get('ultima_lavagem', '').strip()
@@ -591,6 +690,39 @@ def motorista_download_documento_extra(request, pk):
     key = doc.arquivo.name
     filename_base = os.path.basename(key)
     return _file_response_from_storage(key, filename_base, request)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def motorista_remover_documento(request, pk):
+    if request.method != 'POST':
+        return redirect('core:motorista_detail', pk=pk)
+    motorista = get_object_or_404(Motorista, pk=pk)
+    if motorista.documento:
+        motorista.documento.delete(save=True)
+        messages.success(request, 'Documento removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:motorista_detail', pk=motorista.pk)
+
+
+@login_required
+@require_menu_perm('agregamento')
+def motorista_remover_documento_extra(request, pk):
+    if request.method != 'POST':
+        doc = get_object_or_404(MotoristaDocumento, pk=pk)
+        return redirect('core:motorista_detail', pk=doc.motorista_id)
+    doc = get_object_or_404(MotoristaDocumento, pk=pk)
+    motorista_pk = doc.motorista_id
+    if doc.arquivo:
+        doc.arquivo.delete(save=False)
+    doc.delete()
+    messages.success(request, 'Documento anexado removido e excluído do armazenamento.')
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url and next_url.startswith('/') and len(next_url) > 1:
+        return redirect(next_url)
+    return redirect('core:motorista_detail', pk=motorista_pk)
 
 
 @login_required
