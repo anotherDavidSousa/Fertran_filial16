@@ -24,6 +24,16 @@ table.dataTable tbody td {
   font-size: 0.78rem !important;
   padding: 0.2rem 0.45rem !important;
 }
+
+/* Colunas com largura ajustada ao conteúdo */
+#tabelaCavalos th.col-placa, #tabelaCavalos td.col-placa,
+#tabelaCavalos th.col-ano, #tabelaCavalos td.col-ano,
+#tabelaCavalos th.col-tipo, #tabelaCavalos td.col-tipo,
+#tabelaCavalos th.col-carreta, #tabelaCavalos td.col-carreta,
+#tabelaCavalos th.col-motorista, #tabelaCavalos td.col-motorista {
+  white-space: nowrap;
+  width: 1%;
+}
 </style>
 {% endblock %}
 {% block content %}
@@ -73,30 +83,32 @@ table.dataTable tbody td {
   <table id="tabelaCavalos" class="core-table" style="width:100%">
     <thead>
       <tr>
-        <th>Placa</th>
-        <th>Ano</th>
-        <th>Tipo</th>
-        <th>Carreta</th>
-        <th>Motorista</th>
-        <th>Fluxo</th>
-        <th>Situação</th>
-        <th>Ações</th>
+        <th class="col-placa">Placa</th>
+        <th class="col-ano">Ano</th>
+        <th class="col-tipo">Tipo</th>
+        <th class="col-carreta">Carreta</th>
+        <th class="col-motorista">Motorista</th>
+        <th class="col-fluxo">Fluxo</th>
+        <th class="col-laudo">Laudo</th>
+        <th class="col-situacao">Situação</th>
+        <th class="col-acoes">Ações</th>
       </tr>
     </thead>
     <tbody>
       {% for cavalo in cavalos %}
       <tr class="{% if cavalo.fluxo == 'minerio' %}fluxo-minerio{% endif %}">
-        <td><a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa|default:"-" }}</a></td>
-        <td>{{ cavalo.ano|default:"-" }}</td>
-        <td>{% if cavalo.tipo %}<span class="badge-core badge-core-info">{{ cavalo.get_tipo_display }}</span>{% else %}-{% endif %}</td>
-        <td>{% if cavalo.carreta %}{{ cavalo.carreta.placa }}{% else %}S/Placa{% endif %}</td>
-        <td>{% if cavalo.motorista %}{{ cavalo.motorista.nome|default:"-" }}{% else %}-{% endif %}</td>
-        <td>{% if cavalo.fluxo %}{{ cavalo.get_fluxo_display }}{% else %}-{% endif %}</td>
-        <td>{% if cavalo.situacao %}<span class="badge-core {% if cavalo.situacao == 'ativo' %}badge-core-success{% else %}badge-core-warning{% endif %}">{{ cavalo.get_situacao_display }}</span>{% else %}-{% endif %}</td>
-        <td><a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:cavalo_edit' cavalo.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
+        <td class="col-placa"><a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa|default:"-" }}</a></td>
+        <td class="col-ano">{{ cavalo.ano|default:"-" }}</td>
+        <td class="col-tipo">{% if cavalo.tipo %}<span class="badge-core badge-core-info">{{ cavalo.get_tipo_display }}</span>{% else %}-{% endif %}</td>
+        <td class="col-carreta">{% if cavalo.carreta %}{{ cavalo.carreta.placa }}{% else %}S/Placa{% endif %}</td>
+        <td class="col-motorista">{% if cavalo.motorista %}{{ cavalo.motorista.nome|default:"-" }}{% else %}-{% endif %}</td>
+        <td class="col-fluxo">{% if cavalo.fluxo %}{{ cavalo.get_fluxo_display }}{% else %}-{% endif %}</td>
+        <td class="col-laudo">{% if cavalo.emissao_laudo %}{{ cavalo.emissao_laudo|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+        <td class="col-situacao">{% if cavalo.situacao %}<span class="badge-core {% if cavalo.situacao == 'ativo' %}badge-core-success{% else %}badge-core-warning{% endif %}">{{ cavalo.get_situacao_display }}</span>{% else %}-{% endif %}</td>
+        <td class="col-acoes"><a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Ver</a> <a href="{% url 'core:cavalo_edit' cavalo.pk %}" class="btn-core btn-core-primary" style="padding:0.25rem 0.5rem;font-size:0.85rem;">Editar</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="8" style="text-align:center;color:var(--text-secondary);">Nenhum cavalo.</td></tr>
+      <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);">Nenhum cavalo.</td></tr>
       {% endfor %}
     </tbody>
   </table>
