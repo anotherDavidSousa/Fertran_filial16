@@ -4,6 +4,59 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">
 <link rel="stylesheet" href="{% static 'core/css/motorista_profile.css' %}">
+<style>
+  /* Placa Mercosul – inline para garantir exibição (evita cache de CSS) */
+  .motorista-info-item .placa-mercosul-wrap {
+    display: inline-block;
+    text-decoration: none !important;
+    color: inherit;
+  }
+  .motorista-info-item .placa-mercosul-wrap:hover {
+    text-decoration: none !important;
+  }
+  .motorista-info-item .placa-mercosul {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    width: 120px;
+    border: 2px solid #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background: #fff;
+  }
+  .motorista-info-item .placa-mercosul__top {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 6px;
+    background: linear-gradient(180deg, #002776 0%, #001a52 100%);
+    color: #fff !important;
+    font-size: 0.48rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    min-height: 14px;
+  }
+  .motorista-info-item .placa-mercosul__left { flex-shrink: 0; }
+  .motorista-info-item .placa-mercosul__center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.52rem;
+  }
+  .motorista-info-item .placa-mercosul__body {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px 6px;
+    background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 100%);
+    color: #000 !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+</style>
 {% endblock %}
 {% block content %}
 <div class="motorista-profile-header">
