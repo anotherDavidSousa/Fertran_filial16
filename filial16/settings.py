@@ -118,6 +118,7 @@ AWS_S3_FILE_OVERWRITE = True
 AWS_LOCATION = ''  # sem prefixo automático
 AWS_QUERYSTRING_AUTH = False
 
+# default = MinIO: todos os uploads de media (fotos, documentos de motorista/cavalo/carreta etc.) vão para o bucket
 STORAGES = {
     'default': {
         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
