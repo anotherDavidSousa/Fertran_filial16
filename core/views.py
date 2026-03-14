@@ -665,8 +665,15 @@ def motorista_list(request):
 @login_required
 @require_menu_perm('agregamento')
 def motorista_detail(request, pk):
-    motorista = get_object_or_404(Motorista.objects.select_related('cavalo', 'cavalo__carreta'), pk=pk)
-    return render(request, 'core/motorista_detail.html', {'motorista': motorista})
+    motorista = get_object_or_404(
+        Motorista.objects.select_related('cavalo', 'cavalo__carreta').prefetch_related('documentos_extras'),
+        pk=pk
+    )
+    document_filename = os.path.basename(motorista.documento.name) if motorista.documento and motorista.documento.name else None
+    return render(request, 'core/motorista_detail.html', {
+        'motorista': motorista,
+        'document_filename': document_filename,
+    })
 
 
 @login_required
