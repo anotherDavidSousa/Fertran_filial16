@@ -93,6 +93,11 @@
 
 /* Painel Informações */
 .motorista-info-panel .panel-title,
+.motorista-docs-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .motorista-docs-panel .panel-title {
   margin-bottom: 1rem;
 }
@@ -255,7 +260,9 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .motorista-doc-item .doc-info {
@@ -263,6 +270,8 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .motorista-doc-item .doc-icon {
@@ -289,6 +298,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .motorista-doc-item .doc-actions {
@@ -297,7 +307,9 @@
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .motorista-doc-item .btn-doc-download,

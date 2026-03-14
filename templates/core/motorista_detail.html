@@ -128,7 +128,7 @@
             {% if motorista.cavalo %}
               <a href="{% url 'core:cavalo_detail' motorista.cavalo.pk %}" class="placa-mercosul-wrap">
                 <span class="placa-mercosul">
-                  <span class="placa-mercosul__top"><span class="placa-mercosul__left">MERCOSUL</span><span class="placa-mercosul__center">BRASIL</span></span>
+                  <span class="placa-mercosul__top"></span>
                   <span class="placa-mercosul__body">{{ motorista.cavalo.placa|default:"-" }}</span>
                 </span>
               </a>
@@ -148,7 +148,7 @@
             {% if motorista.cavalo and motorista.cavalo.carreta %}
               <a href="{% url 'core:carreta_detail' motorista.cavalo.carreta.pk %}" class="placa-mercosul-wrap">
                 <span class="placa-mercosul">
-                  <span class="placa-mercosul__top"><span class="placa-mercosul__left">MERCOSUL</span><span class="placa-mercosul__center">BRASIL</span></span>
+                  <span class="placa-mercosul__top"></span>
                   <span class="placa-mercosul__body">{{ motorista.cavalo.carreta.placa }}</span>
                 </span>
               </a>
