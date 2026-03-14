@@ -186,3 +186,60 @@
 .detail-doc-item .btn-doc-remover:hover {
   background: #feb2b2; color: #742a2a;
 }
+
+/* Placa Mercosul – molde (perfil motorista e onde mais usar) */
+.placa-mercosul-wrap {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+}
+.placa-mercosul-wrap:hover {
+  text-decoration: none;
+}
+.placa-mercosul {
+  display: inline-flex;
+  flex-direction: column;
+  width: 120px;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  background: #fff;
+}
+.placa-mercosul__top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px;
+  background: linear-gradient(180deg, #002776 0%, #001a52 100%);
+  color: #fff;
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  min-height: 14px;
+}
+.placa-mercosul__left {
+  flex-shrink: 0;
+}
+.placa-mercosul__center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.52rem;
+}
+.placa-mercosul__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px 6px;
+  background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 100%);
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.placa-mercosul-wrap:hover .placa-mercosul {
+  filter: brightness(0.97);
+}
