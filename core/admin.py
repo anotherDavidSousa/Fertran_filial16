@@ -113,6 +113,12 @@ class MotoristaAdmin(admin.ModelAdmin):
     search_fields = ('nome', 'cpf')
     inlines = [MotoristaDocumentoInline]
 
+    def get_inline_instances(self, request, obj=None):
+        """Mostra o inline de documentos só na edição; ao adicionar evita 500 por formulário vazio."""
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
+
 
 @admin.register(LogCarreta)
 class LogCarretaAdmin(admin.ModelAdmin):

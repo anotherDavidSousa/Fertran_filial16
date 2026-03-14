@@ -317,7 +317,7 @@ class ProprietarioDocumento(models.Model):
         verbose_name_plural = 'Documentos do Proprietário'
 
     def __str__(self):
-        return self.arquivo.name
+        return self.arquivo.name if self.arquivo else ''
 
     @property
     def nome_arquivo(self):
@@ -326,7 +326,7 @@ class ProprietarioDocumento(models.Model):
 
 class MotoristaDocumento(models.Model):
     motorista = models.ForeignKey(Motorista, on_delete=models.CASCADE, related_name='documentos_extras')
-    arquivo = models.FileField(upload_to='motoristas/documentos_extras/')
+    arquivo = models.FileField(upload_to='motoristas/documentos_extras/', blank=True, null=True)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -334,7 +334,7 @@ class MotoristaDocumento(models.Model):
         verbose_name_plural = 'Documentos do Motorista'
 
     def __str__(self):
-        return self.arquivo.name
+        return self.arquivo.name if self.arquivo else ''
 
     @property
     def nome_arquivo(self):
