@@ -37,9 +37,11 @@ class CavaloDocumentoInline(admin.TabularInline):
     extra = 1
 
 
-def _cavalos_queryset_ordenado(queryset):
-    """Filtro: apenas com carreta acoplada ou bi-truck. Ordem: Classificação → Situação → Fluxo → Tipo → Motorista (A-Z)."""
-    qs = queryset.filter(Q(carreta__isnull=False) | Q(tipo='bi_truck')).exclude(situacao='desagregado')
+def _cavalos_queryset_ordenado(queryset, filtrar_apenas_com_carreta=False):
+    """Ordenação: Classificação → Situação → Fluxo → Tipo → Motorista (A-Z). Opcional: filtrar só com carreta/bi-truck."""
+    qs = queryset
+    if filtrar_apenas_com_carreta:
+        qs = qs.filter(Q(carreta__isnull=False) | Q(tipo='bi_truck')).exclude(situacao='desagregado')
     return qs.annotate(
         ordem_classificacao=Case(
             When(classificacao='agregado', then=Value(0)),
@@ -84,7 +86,8 @@ class CavaloAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related('motorista', 'carreta', 'gestor')
-        return _cavalos_queryset_ordenado(qs)
+        # Admin: mostrar todos (desagregados, sem carreta, todos os status)
+        return _cavalos_queryset_ordenado(qs, filtrar_apenas_com_carreta=False)
 
 
 class CarretaDocumentoInline(admin.TabularInline):

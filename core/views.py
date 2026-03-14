@@ -223,13 +223,13 @@ def proprietario_edit(request, pk):
 @login_required
 @require_menu_perm('cavalos')
 def cavalo_list(request):
-    # Apenas veículos com carreta acoplada OU bi-truck (S/Placa). Não mostrar desagregados.
+    # Apenas cavalos Ativos com carreta acoplada (template Cavalos)
     cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'gestor').filter(
-        Q(carreta__isnull=False) | Q(tipo='bi_truck')
-    ).exclude(situacao='desagregado')
+        situacao='ativo', carreta__isnull=False
+    )
     from django.db import transaction
     with transaction.atomic():
-        for cavalo in cavalos.filter(motorista__isnull=True, situacao='ativo'):
+        for cavalo in cavalos.filter(motorista__isnull=True):
             cavalo.situacao = 'parado'
             cavalo.save(update_fields=['situacao'])
     situacao_filter = request.GET.get('situacao', '')
