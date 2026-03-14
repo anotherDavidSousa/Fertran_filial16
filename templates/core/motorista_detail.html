@@ -10,7 +10,7 @@
   <div class="motorista-header-left">
     <div class="motorista-avatar">
       {% if motorista.foto %}
-        <img src="{{ motorista.foto.url }}" alt="{{ motorista.nome }}">
+        <img src="{% url 'core:motorista_foto' motorista.pk %}" alt="{{ motorista.nome }}">
       {% else %}
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
       {% endif %}
@@ -73,7 +73,12 @@
           <span class="info-label">Cavalo</span>
           <span class="info-value">
             {% if motorista.cavalo %}
-              <a href="{% url 'core:cavalo_detail' motorista.cavalo.pk %}" class="placa-box">{{ motorista.cavalo.placa|default:"-" }}</a>
+              <a href="{% url 'core:cavalo_detail' motorista.cavalo.pk %}" class="placa-mercosul-wrap">
+                <span class="placa-mercosul">
+                  <span class="placa-mercosul__top"><span class="placa-mercosul__left">MERCOSUL</span><span class="placa-mercosul__center">BRASIL</span></span>
+                  <span class="placa-mercosul__body">{{ motorista.cavalo.placa|default:"-" }}</span>
+                </span>
+              </a>
             {% else %}
               -
             {% endif %}
@@ -88,7 +93,12 @@
           <span class="info-label">Carreta</span>
           <span class="info-value">
             {% if motorista.cavalo and motorista.cavalo.carreta %}
-              <a href="{% url 'core:carreta_detail' motorista.cavalo.carreta.pk %}" class="placa-box">{{ motorista.cavalo.carreta.placa }}</a>
+              <a href="{% url 'core:carreta_detail' motorista.cavalo.carreta.pk %}" class="placa-mercosul-wrap">
+                <span class="placa-mercosul">
+                  <span class="placa-mercosul__top"><span class="placa-mercosul__left">MERCOSUL</span><span class="placa-mercosul__center">BRASIL</span></span>
+                  <span class="placa-mercosul__body">{{ motorista.cavalo.carreta.placa }}</span>
+                </span>
+              </a>
             {% else %}
               -
             {% endif %}

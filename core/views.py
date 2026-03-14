@@ -47,6 +47,16 @@ def _file_response_from_storage(key: str, filename_base: str, request):
     return response
 
 
+def _image_response_from_storage(key: str):
+    """Serve uma imagem do storage (ex.: foto do motorista) para exibição no navegador."""
+    f = _abrir_arquivo_storage_or_404(key)
+    ext = os.path.splitext(key)[1].lower()
+    content_types = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp'}
+    content_type = content_types.get(ext, 'image/jpeg')
+    response = FileResponse(f, content_type=content_type)
+    return response
+
+
 @login_required
 @require_menu_perm('agregamento')
 def index(request):
@@ -674,6 +684,16 @@ def motorista_detail(request, pk):
         'motorista': motorista,
         'document_filename': document_filename,
     })
+
+
+@login_required
+@require_menu_perm('agregamento')
+def motorista_foto(request, pk):
+    """Serve a foto do motorista a partir do MinIO (para exibir no perfil)."""
+    motorista = get_object_or_404(Motorista, pk=pk)
+    if not motorista.foto or not motorista.foto.name:
+        raise Http404('Foto não encontrada.')
+    return _image_response_from_storage(motorista.foto.name)
 
 
 @login_required

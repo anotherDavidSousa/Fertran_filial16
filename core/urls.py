@@ -29,6 +29,7 @@ urlpatterns = [
     path('motoristas/novo/', views.motorista_create, name='motorista_create'),
     path('motoristas/<int:pk>/', views.motorista_detail, name='motorista_detail'),
     path('motoristas/<int:pk>/editar/', views.motorista_edit, name='motorista_edit'),
+    path('motoristas/<int:pk>/foto/', views.motorista_foto, name='motorista_foto'),
     path('motoristas/<int:pk>/download-documento/', views.motorista_download_documento, name='motorista_download_documento'),
     path('motoristas/documento-extra/<int:pk>/', views.motorista_download_documento_extra, name='motorista_download_documento_extra'),
     path('motoristas/<int:pk>/remover-documento/', views.motorista_remover_documento, name='motorista_remover_documento'),

@@ -174,25 +174,68 @@
   text-decoration: none;
 }
 
-/* Placa estilo Mercosul (caixa com fundo) */
-.placa-box {
+/* Placa Mercosul – molde tipo padrão brasileiro */
+.placa-mercosul-wrap {
   display: inline-block;
-  padding: 0.35rem 0.6rem;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #059c3e 0%, #047033 100%);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.05em;
   text-decoration: none;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  color: inherit;
 }
 
-.placa-box:hover {
-  color: #fff;
+.placa-mercosul-wrap:hover {
   text-decoration: none;
-  opacity: 0.95;
+}
+
+.placa-mercosul {
+  display: inline-flex;
+  flex-direction: column;
+  width: 120px;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  background: #fff;
+}
+
+.placa-mercosul__top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px;
+  background: linear-gradient(180deg, #002776 0%, #001a52 100%);
+  color: #fff;
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  min-height: 14px;
+}
+
+.placa-mercosul__left {
+  flex-shrink: 0;
+}
+
+.placa-mercosul__center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.52rem;
+}
+
+.placa-mercosul__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px 6px;
+  background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 100%);
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.placa-mercosul-wrap:hover .placa-mercosul {
+  filter: brightness(0.97);
 }
 
 /* Painel Documentos */
@@ -204,14 +247,15 @@
 
 .motorista-doc-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.75rem;
   padding: 1rem;
   background: var(--bg-page);
   border: 1px solid var(--border);
   border-radius: 10px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .motorista-doc-item .doc-info {
@@ -242,19 +286,25 @@
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .motorista-doc-item .doc-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .motorista-doc-item .btn-doc-download,
 .motorista-doc-item .btn-doc-view {
   padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .motorista-doc-item .btn-doc-remover {
@@ -262,6 +312,7 @@
   padding: 0.4rem 0.5rem;
   font-size: 1.1rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .motorista-docs-empty {
