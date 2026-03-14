@@ -263,7 +263,9 @@ class Motorista(models.Model):
         ordering = ['nome']
 
     def __str__(self):
-        return self.nome or f'Motorista #{self.id}'
+        if self.pk is None:
+            return self.nome or 'Motorista (novo)'
+        return self.nome or f'Motorista #{self.pk}'
 
     def save(self, *args, **kwargs):
         if self.cavalo and self.pk:

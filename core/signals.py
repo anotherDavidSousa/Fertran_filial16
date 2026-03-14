@@ -194,13 +194,22 @@ def log_mudanca_motorista(sender, instance, **kwargs):
 @receiver(post_save, sender=Motorista)
 def sincronizar_cavalo_apos_mudanca_motorista(sender, instance, created, **kwargs):
     try:
-        from .google_sheets import update_cavalo_async
         cavalo_antigo = getattr(instance, '_cavalo_antigo', None)
         cavalo_novo = instance.cavalo
-        if cavalo_novo:
-            update_cavalo_async(cavalo_novo.pk)
-        if cavalo_antigo and cavalo_antigo != cavalo_novo:
-            update_cavalo_async(cavalo_antigo.pk)
+        if cavalo_novo and cavalo_novo.pk:
+            try:
+                from .google_sheets import update_cavalo_async
+                update_cavalo_async(cavalo_novo.pk)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Erro ao chamar update_cavalo_async: {str(e)}")
+        if cavalo_antigo and cavalo_antigo != cavalo_novo and cavalo_antigo.pk:
+            try:
+                from .google_sheets import update_cavalo_async
+                update_cavalo_async(cavalo_antigo.pk)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Erro ao chamar update_cavalo_async (cavalo antigo): {str(e)}")
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Erro ao sincronizar cavalo após mudança de motorista: {str(e)}")
