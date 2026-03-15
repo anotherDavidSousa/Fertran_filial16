@@ -25,6 +25,126 @@ table.dataTable tbody td {
   padding: 0.2rem 0.45rem !important;
 }
 
+/* Trigger do popover do motorista */
+.motorista-preview-trigger { cursor: pointer; }
+.motorista-preview-trigger a { text-decoration: none; color: inherit; }
+
+/* Popover / Preview Card do motorista */
+#motoristaPreviewPopover {
+  position: fixed;
+  z-index: 9999;
+  display: none;
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+  pointer-events: none;
+}
+#motoristaPreviewPopover.is-visible { pointer-events: auto; }
+.motorista-popover-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+}
+.motorista-popover-avatar {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent-muted, #e8eef5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.motorista-popover-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.motorista-popover-avatar svg {
+  width: 28px;
+  height: 28px;
+  color: var(--accent, #2563eb);
+}
+.motorista-popover-info { min-width: 0; flex: 1; }
+.motorista-popover-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  line-height: 1.25;
+  margin: 0 0 4px 0;
+  word-break: break-word;
+}
+.motorista-popover-cpf {
+  font-size: 0.8rem;
+  color: #374151;
+  margin: 0 0 6px 0;
+}
+.motorista-popover-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #fff;
+}
+.motorista-popover-whatsapp-wrap {
+  margin: 0 16px 16px;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.motorista-popover-whatsapp-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #25d366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.motorista-popover-whatsapp-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: #fff;
+}
+.motorista-popover-phone {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: #25d366;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  min-width: 0;
+}
+.motorista-popover-copy {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+.motorista-popover-copy:hover { opacity: 0.9; }
+.motorista-popover-copy svg { width: 18px; height: 18px; }
+
 /* Colunas com largura ajustada ao conteúdo */
 #tabelaCavalos th.col-placa, #tabelaCavalos td.col-placa,
 #tabelaCavalos th.col-ano-cavalo, #tabelaCavalos td.col-ano-cavalo,
@@ -121,7 +241,9 @@ table.dataTable tbody td {
         <td class="col-marca-carreta">{% if cavalo.carreta and cavalo.carreta.marca %}{{ cavalo.carreta.marca }}{% else %}-{% endif %}</td>
         <td class="col-ano-carreta">{% if cavalo.carreta and cavalo.carreta.ano %}{{ cavalo.carreta.ano }}{% else %}-{% endif %}</td>
         <td class="col-tipo-carreta">{% if cavalo.carreta and cavalo.carreta.tipo %}{{ cavalo.carreta.get_tipo_display }}{% else %}-{% endif %}</td>
-        <td class="col-motorista">{% if cavalo.motorista %}{{ cavalo.motorista.nome|default:"-" }}{% else %}-{% endif %}</td>
+        <td class="col-motorista">{% if cavalo.motorista %}
+          <span class="motorista-preview-trigger" data-motorista-pk="{{ cavalo.motorista.pk }}" data-nome="{{ cavalo.motorista.nome|default:'' }}" data-cpf="{{ cavalo.motorista.cpf|default:'' }}" data-whatsapp="{{ cavalo.motorista.whatsapp|default:'' }}" data-foto-url="{% url 'core:motorista_foto' cavalo.motorista.pk %}"><a href="{% url 'core:motorista_detail' cavalo.motorista.pk %}">{{ cavalo.motorista.nome|default:"-" }}</a></span>
+        {% else %}-{% endif %}</td>
         <td class="col-cpf">{% if cavalo.motorista and cavalo.motorista.cpf %}{{ cavalo.motorista.cpf }}{% else %}-{% endif %}</td>
         <td class="col-whatsapp">{% if cavalo.motorista and cavalo.motorista.whatsapp %}{{ cavalo.motorista.whatsapp }}{% else %}-{% endif %}</td>
         <td class="col-fluxo">{% if cavalo.fluxo %}{{ cavalo.get_fluxo_display }}{% else %}-{% endif %}</td>
@@ -137,6 +259,29 @@ table.dataTable tbody td {
     </tbody>
   </table>
 </div>
+
+<div id="motoristaPreviewPopover" aria-hidden="true">
+  <div class="motorista-popover-top">
+    <div class="motorista-popover-avatar">
+      <img src="" alt="" id="motoristaPopoverImg" style="display:none;">
+      <svg id="motoristaPopoverPlaceholder" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </div>
+    <div class="motorista-popover-info">
+      <div class="motorista-popover-nome" id="motoristaPopoverNome"></div>
+      <div class="motorista-popover-cpf" id="motoristaPopoverCpf">CPF: -</div>
+      <span class="motorista-popover-status">Status: Ativo</span>
+    </div>
+  </div>
+  <div class="motorista-popover-whatsapp-wrap" id="motoristaPopoverWhatsappWrap">
+    <div class="motorista-popover-whatsapp-icon">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </div>
+    <span class="motorista-popover-phone" id="motoristaPopoverPhone">-</span>
+    <button type="button" class="motorista-popover-copy" id="motoristaPopoverCopy" title="Copiar número">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    </button>
+  </div>
+</div>
 {% endblock %}
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -147,6 +292,86 @@ $(document).ready(function(){
     language: { url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json' },
     order: [],
     pageLength: 25
+  });
+
+  var $popover = $('#motoristaPreviewPopover');
+  var popoverHideTimer = null;
+  var popoverDelay = 150;
+
+  function showMotoristaPopover($trigger) {
+    var pk = $trigger.data('motorista-pk');
+    var nome = $trigger.data('nome') || '-';
+    var cpf = $trigger.data('cpf') || '';
+    var whatsapp = $trigger.data('whatsapp') || '';
+    var fotoUrl = $trigger.data('foto-url');
+
+    $('#motoristaPopoverNome').text(nome);
+    $('#motoristaPopoverCpf').text('CPF: ' + (cpf || '-'));
+    $('#motoristaPopoverPhone').text(whatsapp || '-');
+    $('#motoristaPopoverWhatsappWrap').toggle(!!whatsapp);
+
+    var $img = $('#motoristaPopoverImg');
+    var $placeholder = $('#motoristaPopoverPlaceholder');
+    if (fotoUrl) {
+      $img.attr('src', fotoUrl).attr('alt', nome).show();
+      $placeholder.hide();
+    } else {
+      $img.hide().attr('src', '');
+      $placeholder.show();
+    }
+
+    $popover.addClass('is-visible').css('display', 'block');
+    var triggerEl = $trigger[0];
+    var rect = triggerEl.getBoundingClientRect();
+    var popWidth = 320;
+    var popHeight = $popover.outerHeight();
+    var gap = 8;
+    var rightSpace = window.innerWidth - rect.right;
+    var belowSpace = window.innerHeight - rect.bottom;
+    var left = rightSpace >= popWidth + gap ? rect.right + gap : rect.left - popWidth - gap;
+    if (left < 10) left = 10;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    var top = rect.top + (rect.height / 2) - (popHeight / 2);
+    if (top < 10) top = 10;
+    if (top + popHeight > window.innerHeight - 10) top = window.innerHeight - popHeight - 10;
+    $popover.css({ left: left + 'px', top: top + 'px' });
+  }
+
+  function hideMotoristaPopover() {
+    popoverHideTimer = setTimeout(function(){
+      $popover.removeClass('is-visible').css('display', 'none');
+    }, popoverDelay);
+  }
+
+  function cancelHide() {
+    if (popoverHideTimer) clearTimeout(popoverHideTimer);
+    popoverHideTimer = null;
+  }
+
+  $(document).on('mouseenter', '.motorista-preview-trigger', function(){
+    cancelHide();
+    showMotoristaPopover($(this));
+  });
+  $(document).on('mouseleave', '.motorista-preview-trigger', function(){
+    hideMotoristaPopover();
+  });
+  $popover.on('mouseenter', cancelHide);
+  $popover.on('mouseleave', function(){
+    hideMotoristaPopover();
+  });
+
+  $('#motoristaPopoverCopy').on('click', function(){
+    var phone = $('#motoristaPopoverPhone').text().trim().replace(/\D/g, '');
+    if (!phone) return;
+    var full = $('#motoristaPopoverPhone').text().trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(full).then(function(){
+        var btn = $('#motoristaPopoverCopy');
+        var prev = btn.html();
+        btn.html('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>');
+        setTimeout(function(){ btn.html(prev); }, 800);
+      });
+    }
   });
 });
 </script>
