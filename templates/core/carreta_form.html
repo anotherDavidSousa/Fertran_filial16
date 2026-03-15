@@ -90,7 +90,7 @@
     </div>
     <div class="form-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" rows="4">{% if carreta %}{{ carreta.observacoes }}{% endif %}</textarea></div>
     <div class="form-group"><label for="emissao_laudo">Emissão do laudo</label><input type="date" id="emissao_laudo" name="emissao_laudo" value="{% if carreta and carreta.emissao_laudo %}{{ carreta.emissao_laudo|date:'Y-m-d' }}{% endif %}"></div>
-    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if carreta and carreta.foto %}<span class="form-text">Atual: <a href="{{ carreta.foto.url }}" target="_blank">Ver foto</a></span>{% endif %}</div>
+    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if carreta and carreta.foto %}<span class="form-text">Atual: <a href="{% url 'core:carreta_foto' carreta.pk %}" target="_blank">Ver foto</a></span>{% endif %}</div>
     <div class="form-group">
       <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">

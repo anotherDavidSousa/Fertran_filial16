@@ -312,6 +312,16 @@ def cavalo_detail(request, pk):
 
 @login_required
 @require_menu_perm('cavalos')
+def cavalo_foto(request, pk):
+    """Serve a foto do cavalo a partir do MinIO (para exibir no perfil)."""
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    if not cavalo.foto or not cavalo.foto.name:
+        raise Http404('Foto não encontrada.')
+    return _image_response_from_storage(cavalo.foto.name)
+
+
+@login_required
+@require_menu_perm('cavalos')
 def cavalo_download_documento(request, pk):
     cavalo = get_object_or_404(Cavalo, pk=pk)
     if not cavalo.documento:
@@ -528,6 +538,16 @@ def carreta_detail(request, pk):
         pk=pk
     )
     return render(request, 'core/carreta_detail.html', {'carreta': carreta})
+
+
+@login_required
+@require_menu_perm('agregamento')
+def carreta_foto(request, pk):
+    """Serve a foto da carreta a partir do MinIO (para exibir no perfil)."""
+    carreta = get_object_or_404(Carreta, pk=pk)
+    if not carreta.foto or not carreta.foto.name:
+        raise Http404('Foto não encontrada.')
+    return _image_response_from_storage(carreta.foto.name)
 
 
 @login_required

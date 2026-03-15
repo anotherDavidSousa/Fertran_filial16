@@ -18,7 +18,7 @@
   </div>
   <div class="detail-hero-right">
     {% if carreta.foto %}
-    <img src="{{ carreta.foto.url }}" alt="Foto {{ carreta.placa }}">
+    <img src="{% url 'core:carreta_foto' carreta.pk %}" alt="Foto {{ carreta.placa }}">
     {% else %}
     <div class="detail-hero-placeholder">Sem foto</div>
     {% endif %}

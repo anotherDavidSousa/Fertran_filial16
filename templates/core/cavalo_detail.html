@@ -18,7 +18,7 @@
   </div>
   <div class="detail-hero-right">
     {% if cavalo.foto %}
-    <img src="{{ cavalo.foto.url }}" alt="Foto {{ cavalo.placa }}">
+    <img src="{% url 'core:cavalo_foto' cavalo.pk %}" alt="Foto {{ cavalo.placa }}">
     {% else %}
     <div class="detail-hero-placeholder">Sem foto</div>
     {% endif %}

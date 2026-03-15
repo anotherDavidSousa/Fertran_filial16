@@ -87,7 +87,7 @@
       <span class="form-text">Apenas carretas compatíveis com a classificação do cavalo.</span>
     </div>
     <div class="form-group"><label for="emissao_laudo">Emissão do laudo</label><input type="date" id="emissao_laudo" name="emissao_laudo" value="{% if cavalo and cavalo.emissao_laudo %}{{ cavalo.emissao_laudo|date:'Y-m-d' }}{% endif %}"></div>
-    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if cavalo and cavalo.foto %}<span class="form-text">Atual: <a href="{{ cavalo.foto.url }}" target="_blank">Ver</a></span>{% endif %}</div>
+    <div class="form-group"><label for="foto">Foto</label><input type="file" id="foto" name="foto" accept="image/*">{% if cavalo and cavalo.foto %}<span class="form-text">Atual: <a href="{% url 'core:cavalo_foto' cavalo.pk %}" target="_blank">Ver</a></span>{% endif %}</div>
     <div class="form-group">
       <label for="documento">Documento principal</label>
       <input type="file" id="documento" name="documento">
