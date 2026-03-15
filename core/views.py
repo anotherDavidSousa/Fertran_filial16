@@ -234,7 +234,7 @@ def proprietario_edit(request, pk):
 @require_menu_perm('cavalos')
 def cavalo_list(request):
     # Apenas cavalos Ativos com carreta acoplada (template Cavalos)
-    cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'gestor').filter(
+    cavalos = Cavalo.objects.select_related('motorista', 'carreta', 'gestor', 'proprietario').filter(
         situacao='ativo', carreta__isnull=False
     )
     from django.db import transaction

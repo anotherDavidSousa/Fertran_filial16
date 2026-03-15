@@ -145,6 +145,97 @@ table.dataTable tbody td {
 .motorista-popover-copy:hover { opacity: 0.9; }
 .motorista-popover-copy svg { width: 18px; height: 18px; }
 
+/* Fonte tipo placa de veículo (FE-Schrift) – coloque FE-Schrift.woff2 em core/static/core/fonts/ para usar */
+@font-face {
+  font-family: 'FE-Schrift';
+  src: url('{% static "core/fonts/FE-Schrift.woff2" %}') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+}
+
+/* Trigger do popover do cavalo */
+.cavalo-preview-trigger { cursor: pointer; }
+.cavalo-preview-trigger a { text-decoration: none; color: inherit; }
+
+/* Popover / Preview Card do cavalo */
+#cavaloPreviewPopover {
+  position: fixed;
+  z-index: 9999;
+  display: none;
+  width: 300px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+  pointer-events: none;
+}
+#cavaloPreviewPopover.is-visible { pointer-events: auto; }
+.cavalo-popover-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+}
+.cavalo-popover-avatar {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent-muted, #e8eef5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cavalo-popover-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cavalo-popover-avatar svg {
+  width: 36px;
+  height: 36px;
+  color: var(--accent, #2563eb);
+}
+.cavalo-popover-info { min-width: 0; flex: 1; }
+.cavalo-popover-placa-wrap {
+  margin-bottom: 10px;
+}
+/* Placa no pattern de veículo – FE-Schrift ou fallback */
+.cavalo-popover-placa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  height: 44px;
+  padding: 0 12px;
+  background: url('{% static "fila/images/placa-pattern.png" %}') center/cover no-repeat;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.cavalo-popover-placa-numero {
+  font-family: 'FE-Schrift', 'Courier New', Consolas, monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #1a1a1a;
+  text-transform: uppercase;
+}
+.cavalo-popover-proprietario {
+  font-size: 0.85rem;
+  color: #374151;
+  margin: 0;
+  font-weight: 500;
+}
+.cavalo-popover-proprietario-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
 /* Colunas com largura ajustada ao conteúdo */
 #tabelaCavalos th.col-placa, #tabelaCavalos td.col-placa,
 #tabelaCavalos th.col-ano-cavalo, #tabelaCavalos td.col-ano-cavalo,
@@ -234,7 +325,9 @@ table.dataTable tbody td {
     <tbody>
       {% for cavalo in cavalos %}
       <tr class="{% if cavalo.fluxo == 'minerio' %}fluxo-minerio{% endif %}">
-        <td class="col-placa"><a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa|default:"-" }}</a></td>
+        <td class="col-placa">{% if cavalo.placa %}
+          <span class="cavalo-preview-trigger" data-cavalo-pk="{{ cavalo.pk }}" data-placa="{{ cavalo.placa }}" data-proprietario="{{ cavalo.proprietario.nome_razao_social|default:'' }}" {% if cavalo.foto %}data-foto-url="{% url 'core:cavalo_foto' cavalo.pk %}"{% endif %}><a href="{% url 'core:cavalo_detail' cavalo.pk %}">{{ cavalo.placa }}</a></span>
+        {% else %}<a href="{% url 'core:cavalo_detail' cavalo.pk %}">-</a>{% endif %}</td>
         <td class="col-ano-cavalo">{{ cavalo.ano|default:"-" }}</td>
         <td class="col-tipo-cavalo">{% if cavalo.tipo %}<span class="badge-core badge-core-info">{{ cavalo.get_tipo_display }}</span>{% else %}-{% endif %}</td>
         <td class="col-carreta">{% if cavalo.carreta %}{{ cavalo.carreta.placa }}{% else %}S/Placa{% endif %}</td>
@@ -282,6 +375,24 @@ table.dataTable tbody td {
     </button>
   </div>
 </div>
+
+<div id="cavaloPreviewPopover" aria-hidden="true">
+  <div class="cavalo-popover-top">
+    <div class="cavalo-popover-avatar">
+      <img src="" alt="" id="cavaloPopoverImg" style="display:none;">
+      <svg id="cavaloPopoverPlaceholder" viewBox="0 0 24 24" fill="currentColor"><path d="M14 18v-3M10 18v-3M15 12h4l1.5 3h-5.5M5 12h4L7.5 15H6M2 18h20"/><rect x="2" y="8" width="20" height="6" rx="1"/></svg>
+    </div>
+    <div class="cavalo-popover-info">
+      <div class="cavalo-popover-placa-wrap">
+        <div class="cavalo-popover-placa">
+          <span class="cavalo-popover-placa-numero" id="cavaloPopoverPlaca">-</span>
+        </div>
+      </div>
+      <div class="cavalo-popover-proprietario-label">Proprietário</div>
+      <div class="cavalo-popover-proprietario" id="cavaloPopoverProprietario">-</div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -298,7 +409,73 @@ $(document).ready(function(){
   var popoverHideTimer = null;
   var popoverDelay = 150;
 
+  var $cavaloPopover = $('#cavaloPreviewPopover');
+  var cavaloPopoverHideTimer = null;
+
+  function showCavaloPopover($trigger) {
+    $popover.removeClass('is-visible').css('display', 'none');
+    if (popoverHideTimer) clearTimeout(popoverHideTimer);
+    popoverHideTimer = null;
+    var placa = $trigger.data('placa') || '-';
+    var proprietario = $trigger.data('proprietario') || '-';
+    var fotoUrl = $trigger.data('foto-url');
+
+    $('#cavaloPopoverPlaca').text(placa);
+    $('#cavaloPopoverProprietario').text(proprietario);
+
+    var $img = $('#cavaloPopoverImg');
+    var $placeholder = $('#cavaloPopoverPlaceholder');
+    if (fotoUrl) {
+      $img.attr('src', fotoUrl).attr('alt', placa).show();
+      $placeholder.hide();
+    } else {
+      $img.hide().attr('src', '');
+      $placeholder.show();
+    }
+
+    $cavaloPopover.addClass('is-visible').css('display', 'block');
+    var triggerEl = $trigger[0];
+    var rect = triggerEl.getBoundingClientRect();
+    var popWidth = 300;
+    var popHeight = $cavaloPopover.outerHeight();
+    var gap = 8;
+    var rightSpace = window.innerWidth - rect.right;
+    var left = rightSpace >= popWidth + gap ? rect.right + gap : rect.left - popWidth - gap;
+    if (left < 10) left = 10;
+    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
+    var top = rect.top + (rect.height / 2) - (popHeight / 2);
+    if (top < 10) top = 10;
+    if (top + popHeight > window.innerHeight - 10) top = window.innerHeight - popHeight - 10;
+    $cavaloPopover.css({ left: left + 'px', top: top + 'px' });
+  }
+
+  function hideCavaloPopover() {
+    cavaloPopoverHideTimer = setTimeout(function(){
+      $cavaloPopover.removeClass('is-visible').css('display', 'none');
+    }, popoverDelay);
+  }
+
+  function cancelCavaloHide() {
+    if (cavaloPopoverHideTimer) clearTimeout(cavaloPopoverHideTimer);
+    cavaloPopoverHideTimer = null;
+  }
+
+  $(document).on('mouseenter', '.cavalo-preview-trigger', function(){
+    cancelCavaloHide();
+    showCavaloPopover($(this));
+  });
+  $(document).on('mouseleave', '.cavalo-preview-trigger', function(){
+    hideCavaloPopover();
+  });
+  $cavaloPopover.on('mouseenter', cancelCavaloHide);
+  $cavaloPopover.on('mouseleave', function(){
+    hideCavaloPopover();
+  });
+
   function showMotoristaPopover($trigger) {
+    $cavaloPopover.removeClass('is-visible').css('display', 'none');
+    if (cavaloPopoverHideTimer) clearTimeout(cavaloPopoverHideTimer);
+    cavaloPopoverHideTimer = null;
     var pk = $trigger.data('motorista-pk');
     var nome = $trigger.data('nome') || '-';
     var cpf = $trigger.data('cpf') || '';
