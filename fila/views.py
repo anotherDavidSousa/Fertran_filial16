@@ -11,6 +11,10 @@ from django.contrib import messages
 from .models import Carregamento, OST, CTe
 from .ost_extractor import ExtratorOST
 from .processador_cte import ExtratorCTe
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 import json
 import re
 import unicodedata
@@ -725,6 +729,88 @@ def _encontrar_cte_existente(filial, serie, numero_cte):
     ).first()
 
 
+def processar_ost_pdf(content: bytes) -> dict:
+    """
+    Processa um PDF de OST: extrai dados, demembra por página, salva no MinIO e cria/atualiza registros OST.
+    content: bytes do arquivo PDF.
+    Retorna: dict com criados, atualizados, ignorados_duplicata, upload_id.
+    Levanta Exception em caso de erro.
+    """
+    if not PdfReader or not PdfWriter:
+        raise RuntimeError('Biblioteca pypdf não disponível para demembrar os PDFs.')
+    upload_id = uuid.uuid4().hex
+    extrator = ExtratorOST(BytesIO(content))
+    criados = 0
+    atualizados = 0
+    ignorados_duplicata = 0
+    for page_index, records in extrator.processar_pdf_por_pagina():
+        key = _demembrar_e_enviar_pagina_minio(content, page_index, upload_id)
+        for d in records:
+            attrs = _dados_ost_para_model(d)
+            attrs['pdf_storage_key'] = key
+            existente = _encontrar_ost_existente(
+                attrs['filial'], attrs['serie'], attrs['documento'], attrs['nota_fiscal']
+            )
+            if existente:
+                if existente.pdf_storage_key:
+                    ignorados_duplicata += 1
+                    continue
+                for k, v in attrs.items():
+                    setattr(existente, k, v)
+                existente.save()
+                atualizados += 1
+            else:
+                OST.objects.create(**attrs)
+                criados += 1
+    return {
+        'criados': criados,
+        'atualizados': atualizados,
+        'ignorados_duplicata': ignorados_duplicata,
+        'upload_id': upload_id,
+    }
+
+
+def processar_cte_pdf(content: bytes) -> dict:
+    """
+    Processa um PDF de CT-e: extrai dados, demembra por página, salva no MinIO e cria/atualiza registros CTe.
+    content: bytes do arquivo PDF.
+    Retorna: dict com criados, atualizados, ignorados_duplicata, upload_id.
+    Levanta Exception em caso de erro.
+    """
+    if not PdfReader or not PdfWriter:
+        raise RuntimeError('Biblioteca pypdf não disponível para demembrar os PDFs.')
+    upload_id = uuid.uuid4().hex
+    extrator = ExtratorCTe(BytesIO(content))
+    criados = 0
+    atualizados = 0
+    ignorados_duplicata = 0
+    for page_index, records in extrator.processar_pdf_por_pagina():
+        key = _demembrar_e_enviar_pagina_minio_cte(content, page_index, upload_id)
+        for d in records:
+            attrs = _dados_cte_para_model(d)
+            attrs['pdf_storage_key'] = key
+            existente = _encontrar_cte_existente(
+                attrs['filial'], attrs['serie'], attrs['numero_cte']
+            )
+            if existente:
+                if existente.pdf_storage_key:
+                    ignorados_duplicata += 1
+                    continue
+                for k, v in attrs.items():
+                    setattr(existente, k, v)
+                existente.save()
+                atualizados += 1
+            else:
+                CTe.objects.create(**attrs)
+                criados += 1
+    return {
+        'criados': criados,
+        'atualizados': atualizados,
+        'ignorados_duplicata': ignorados_duplicata,
+        'upload_id': upload_id,
+    }
+
+
 @login_required
 @require_menu_perm('processador')
 def processador_view(request):
@@ -732,89 +818,38 @@ def processador_view(request):
     Anti-duplicata: mesmo documento + mesma nota fiscal não cria novo registro; se já existir OST com PDF, não sobrescreve.
     Se existir OST sem PDF, atualiza com o PDF e dados extraídos."""
     if request.method == 'POST':
-        if (request.FILES.get('ost_pdf') or request.FILES.get('cte_pdf')) and (not PdfReader or not PdfWriter):
-            messages.error(request, 'Biblioteca pypdf não disponível para demembrar os PDFs.')
-            return redirect('processador')
-
         ost_file = request.FILES.get('ost_pdf')
         if ost_file and ost_file.name.lower().endswith('.pdf'):
             try:
                 content = b''.join(ost_file.chunks())
-                upload_id = uuid.uuid4().hex
-                extrator = ExtratorOST(BytesIO(content))
-                criados = 0
-                atualizados = 0
-                ignorados_duplicata = 0
-                for page_index, records in extrator.processar_pdf_por_pagina():
-                    key = _demembrar_e_enviar_pagina_minio(content, page_index, upload_id)
-                    for d in records:
-                        attrs = _dados_ost_para_model(d)
-                        attrs['pdf_storage_key'] = key
-                        existente = _encontrar_ost_existente(
-                            attrs['filial'], attrs['serie'], attrs['documento'], attrs['nota_fiscal']
-                        )
-                        if existente:
-                            if existente.pdf_storage_key:
-                                ignorados_duplicata += 1
-                                continue
-                            for k, v in attrs.items():
-                                setattr(existente, k, v)
-                            existente.save()
-                            atualizados += 1
-                        else:
-                            OST.objects.create(**attrs)
-                            criados += 1
+                result = processar_ost_pdf(content)
                 partes = []
-                if criados:
-                    partes.append(f'{criados} criado(s)')
-                if atualizados:
-                    partes.append(f'{atualizados} atualizado(s) com PDF')
-                if ignorados_duplicata:
-                    partes.append(f'{ignorados_duplicata} duplicata(s) ignorada(s)')
-                msg = f'OST: {"; ".join(partes)}. PDFs em ost/{upload_id}/.' if partes else f'OST: nenhum registro novo. {ignorados_duplicata} duplicata(s). PDFs em ost/{upload_id}/.'
+                if result['criados']:
+                    partes.append(f"{result['criados']} criado(s)")
+                if result['atualizados']:
+                    partes.append(f"{result['atualizados']} atualizado(s) com PDF")
+                if result['ignorados_duplicata']:
+                    partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
+                msg = f"OST: {'; '.join(partes)}. PDFs em ost/{result['upload_id']}/." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ost/{result['upload_id']}/."
                 messages.success(request, msg)
             except Exception as e:
                 messages.error(request, f'Erro ao processar PDF OST: {e}')
         elif ost_file:
             messages.warning(request, 'Envie um arquivo PDF para OST.')
 
-        # --- CT-e ---
         cte_file = request.FILES.get('cte_pdf')
         if cte_file and cte_file.name.lower().endswith('.pdf'):
             try:
                 content = b''.join(cte_file.chunks())
-                upload_id = uuid.uuid4().hex
-                extrator = ExtratorCTe(BytesIO(content))
-                criados = 0
-                atualizados = 0
-                ignorados_duplicata = 0
-                for page_index, records in extrator.processar_pdf_por_pagina():
-                    key = _demembrar_e_enviar_pagina_minio_cte(content, page_index, upload_id)
-                    for d in records:
-                        attrs = _dados_cte_para_model(d)
-                        attrs['pdf_storage_key'] = key
-                        existente = _encontrar_cte_existente(
-                            attrs['filial'], attrs['serie'], attrs['numero_cte']
-                        )
-                        if existente:
-                            if existente.pdf_storage_key:
-                                ignorados_duplicata += 1
-                                continue
-                            for k, v in attrs.items():
-                                setattr(existente, k, v)
-                            existente.save()
-                            atualizados += 1
-                        else:
-                            CTe.objects.create(**attrs)
-                            criados += 1
+                result = processar_cte_pdf(content)
                 partes = []
-                if criados:
-                    partes.append(f'{criados} criado(s)')
-                if atualizados:
-                    partes.append(f'{atualizados} atualizado(s) com PDF')
-                if ignorados_duplicata:
-                    partes.append(f'{ignorados_duplicata} duplicata(s) ignorada(s)')
-                msg = f'CT-e: {"; ".join(partes)}. PDFs em ctes/{upload_id}/.' if partes else f'CT-e: nenhum registro novo. {ignorados_duplicata} duplicata(s). PDFs em ctes/{upload_id}/.'
+                if result['criados']:
+                    partes.append(f"{result['criados']} criado(s)")
+                if result['atualizados']:
+                    partes.append(f"{result['atualizados']} atualizado(s) com PDF")
+                if result['ignorados_duplicata']:
+                    partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
+                msg = f"CT-e: {'; '.join(partes)}. PDFs em ctes/{result['upload_id']}/." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ctes/{result['upload_id']}/."
                 messages.success(request, msg)
             except Exception as e:
                 messages.error(request, f'Erro ao processar PDF CT-e: {e}')
@@ -823,3 +858,93 @@ def processador_view(request):
 
         return redirect('processador')
     return render(request, 'fila/processador.html')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_processar_ost(request):
+    """
+    API: processa um PDF de OST enviado por multipart/form-data.
+    Campo do arquivo: 'pdf' (ou 'ost_pdf').
+    Retorna JSON com criados, atualizados, ignorados_duplicata, upload_id e mensagem.
+    """
+    pdf_file = request.FILES.get('pdf') or request.FILES.get('ost_pdf')
+    if not pdf_file:
+        return Response(
+            {'erro': 'Envie um arquivo PDF no campo "pdf" ou "ost_pdf".'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not (pdf_file.name or '').lower().endswith('.pdf'):
+        return Response(
+            {'erro': 'O arquivo deve ser um PDF.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        content = b''.join(pdf_file.chunks())
+        result = processar_ost_pdf(content)
+        partes = []
+        if result['criados']:
+            partes.append(f"{result['criados']} criado(s)")
+        if result['atualizados']:
+            partes.append(f"{result['atualizados']} atualizado(s) com PDF")
+        if result['ignorados_duplicata']:
+            partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
+        msg = f"OST: {'; '.join(partes)}. PDFs em ost/{result['upload_id']}/." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ost/{result['upload_id']}/."
+        return Response({
+            'ok': True,
+            'mensagem': msg,
+            'criados': result['criados'],
+            'atualizados': result['atualizados'],
+            'ignorados_duplicata': result['ignorados_duplicata'],
+            'upload_id': result['upload_id'],
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {'ok': False, 'erro': str(e)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_processar_cte(request):
+    """
+    API: processa um PDF de CT-e enviado por multipart/form-data.
+    Campo do arquivo: 'pdf' (ou 'cte_pdf').
+    Retorna JSON com criados, atualizados, ignorados_duplicata, upload_id e mensagem.
+    """
+    pdf_file = request.FILES.get('pdf') or request.FILES.get('cte_pdf')
+    if not pdf_file:
+        return Response(
+            {'erro': 'Envie um arquivo PDF no campo "pdf" ou "cte_pdf".'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if not (pdf_file.name or '').lower().endswith('.pdf'):
+        return Response(
+            {'erro': 'O arquivo deve ser um PDF.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        content = b''.join(pdf_file.chunks())
+        result = processar_cte_pdf(content)
+        partes = []
+        if result['criados']:
+            partes.append(f"{result['criados']} criado(s)")
+        if result['atualizados']:
+            partes.append(f"{result['atualizados']} atualizado(s) com PDF")
+        if result['ignorados_duplicata']:
+            partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
+        msg = f"CT-e: {'; '.join(partes)}. PDFs em ctes/{result['upload_id']}/." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ctes/{result['upload_id']}/."
+        return Response({
+            'ok': True,
+            'mensagem': msg,
+            'criados': result['criados'],
+            'atualizados': result['atualizados'],
+            'ignorados_duplicata': result['ignorados_duplicata'],
+            'upload_id': result['upload_id'],
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {'ok': False, 'erro': str(e)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

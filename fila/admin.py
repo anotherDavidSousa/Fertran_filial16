@@ -6,12 +6,19 @@ from .models import Carregamento, OST, CTe
 class CarregamentoAdmin(admin.ModelAdmin):
     list_display = (
         'nota_fiscal', 'chave_acesso', 'fluxo', 'emit_nome',
-        'datahora_emissao', 'arquivado', 'criado_em'
+        'peso_display', 'datahora_emissao', 'arquivado', 'criado_em'
     )
     list_filter = ('fluxo', 'arquivado')
     search_fields = ('chave_acesso', 'nota_fiscal', 'emit_nome', 'dest_nome', 'xProd_produto')
     readonly_fields = ('criado_em', 'atualizado_em')
     date_hierarchy = 'datahora_emissao'
+
+    def peso_display(self, obj):
+        """Exibe o Peso (qCom) na lista do admin."""
+        if obj.qCom_peso is None:
+            return '—'
+        return obj.qCom_peso
+    peso_display.short_description = 'Peso'
 
 
 @admin.register(OST)

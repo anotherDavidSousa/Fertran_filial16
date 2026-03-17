@@ -18,4 +18,7 @@ urlpatterns = [
     path('item/<int:pk>/download-xml/', views.item_download_xml, name='download_xml'),
     path('item/<int:pk>/download-ost-pdf/', views.item_download_ost_pdf, name='download_ost_pdf'),
     path('processador/', views.processador_view, name='processador'),
+    # API: processadores OST e CT-e recebem PDF por multipart/form-data
+    path('api/processar-ost/', views.api_processar_ost, name='api_processar_ost'),
+    path('api/processar-cte/', views.api_processar_cte, name='api_processar_cte'),
 ]
