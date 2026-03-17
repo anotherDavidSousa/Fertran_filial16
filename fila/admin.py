@@ -19,6 +19,7 @@ class CarregamentoAdmin(admin.ModelAdmin):
             return '—'
         return obj.qCom_peso
     peso_display.short_description = 'Peso'
+    peso_display.admin_order_field = 'qCom_peso'
 
 
 @admin.register(OST)
