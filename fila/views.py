@@ -19,13 +19,109 @@ import json
 import re
 import unicodedata
 import uuid
-from io import BytesIO
 from datetime import datetime
+from io import BytesIO
+from typing import List, Optional
 
 try:
     from pypdf import PdfReader, PdfWriter
 except ImportError:
     PdfReader = PdfWriter = None
+
+
+def _sanitizar_nome_objeto_storage(s: str, max_len: int = 80) -> str:
+    """Remove caracteres inválidos para chave S3/MinIO no segmento do nome do arquivo."""
+    if not s:
+        return ''
+    s = str(s).strip()
+    s = unicodedata.normalize('NFKD', s)
+    s = ''.join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r'[^\w.\-]+', '_', s, flags=re.ASCII)
+    s = re.sub(r'_+', '_', s).strip('._')
+    return (s or 'doc')[:max_len]
+
+
+def _stem_apenas_numero_nota(nf_val) -> str:
+    """
+    Nome preferencial no MinIO: só o número da nota (ex.: 7310980).
+    Extrai dígitos do valor; se não houver, sanitiza o texto.
+    """
+    raw = str(nf_val).strip()
+    if not raw:
+        return ''
+    digits = re.sub(r'\D', '', raw)
+    if digits:
+        return digits[:30]
+    seg = _sanitizar_nome_objeto_storage(raw, max_len=40)
+    return seg if seg and seg != 'doc' else ''
+
+
+def _stem_base_ost(attrs: dict) -> str:
+    """Nome do ficheiro: 1ª nota fiscal (só número, ex. 7310980); senão filial_série_documento."""
+    nfs = attrs.get('nota_fiscal') or []
+    if isinstance(nfs, (list, tuple)):
+        for x in nfs:
+            stem = _stem_apenas_numero_nota(x)
+            if stem:
+                return stem
+    elif nfs:
+        stem = _stem_apenas_numero_nota(nfs)
+        if stem:
+            return stem
+    filial = _sanitizar_nome_objeto_storage(str(attrs.get('filial') or ''), max_len=12)
+    serie = _sanitizar_nome_objeto_storage(str(attrs.get('serie') or ''), max_len=12)
+    doc = _sanitizar_nome_objeto_storage(str(attrs.get('documento') or ''), max_len=40)
+    partes = [p for p in (filial, serie, doc) if p and p != 'doc']
+    if partes:
+        return '_'.join(partes)
+    return 'sem_identificacao'
+
+
+def _stem_base_cte(attrs: dict) -> str:
+    """Preferência: número da NF-e só dígitos; senão número do CT-e."""
+    nf = (attrs.get('nota_fiscal') or '').strip()
+    if nf:
+        stem = _stem_apenas_numero_nota(nf)
+        if stem:
+            return stem
+    ncte = (attrs.get('numero_cte') or '').strip()
+    if ncte:
+        stem = _stem_apenas_numero_nota(ncte)
+        if stem:
+            return stem
+        seg = _sanitizar_nome_objeto_storage(ncte, max_len=50)
+        if seg and seg != 'doc':
+            return seg
+    return 'sem_identificacao'
+
+
+def _stem_de_chave_storage(key: str) -> str:
+    """Parte final da chave MinIO sem pasta nem .pdf (ex. ost/7310980.pdf → 7310980)."""
+    if not key:
+        return ''
+    name = key.strip('/').split('/')[-1]
+    if name.lower().endswith('.pdf'):
+        name = name[:-4]
+    return name
+
+
+def _alocar_stem_multipagina(
+    base_stem: str, page_index: int, total_pages_pdf: int, stems_ja_usados: set
+) -> str:
+    """
+    PDF multipágina (fluxo habitual): cada folha vira um ficheiro; o nome é só o nº da NF quando possível.
+    Primeira vez que um ``base_stem`` aparece neste processamento → ``7310980.pdf``.
+    Mesma NF noutra folha do **mesmo** PDF → ``7310980_p3.pdf`` (índice da página).
+    PDF de uma só folha → sempre ``base_stem`` sem sufixo.
+    """
+    if total_pages_pdf <= 1:
+        stem = base_stem
+    elif base_stem not in stems_ja_usados:
+        stem = base_stem
+    else:
+        stem = f'{base_stem}_p{page_index}'
+    stems_ja_usados.add(stem)
+    return stem
 
 
 def logout_view(request):
@@ -643,15 +739,18 @@ def _dados_ost_para_model(d):
     }
 
 
-def _demembrar_e_enviar_pagina_minio(content: bytes, page_index: int, upload_id: str) -> str:
-    """Gera PDF de uma única página e salva no MinIO. Retorna a chave do objeto."""
+def _demembrar_e_enviar_pagina_minio(
+    content: bytes, page_index: int, nome_stem: Optional[str] = None
+) -> str:
+    """Gera PDF de uma única página e salva no MinIO em ost/{stem}.pdf (sem pasta upload_id)."""
     reader = PdfReader(BytesIO(content))
     writer = PdfWriter()
     writer.add_page(reader.pages[page_index])
     buf = BytesIO()
     writer.write(buf)
     buf.seek(0)
-    key = f'ost/{upload_id}/{page_index}.pdf'
+    stem = nome_stem if nome_stem else f'pagina_{page_index}'
+    key = f'ost/{stem}.pdf'
     default_storage.save(key, buf)
     return key
 
@@ -707,15 +806,18 @@ def _dados_cte_para_model(d):
     }
 
 
-def _demembrar_e_enviar_pagina_minio_cte(content: bytes, page_index: int, upload_id: str) -> str:
-    """Gera PDF de uma única página e salva no MinIO (pasta ctes/). Retorna a chave do objeto."""
+def _demembrar_e_enviar_pagina_minio_cte(
+    content: bytes, page_index: int, nome_stem: Optional[str] = None
+) -> str:
+    """Gera PDF de uma única página e salva em ctes/{stem}.pdf."""
     reader = PdfReader(BytesIO(content))
     writer = PdfWriter()
     writer.add_page(reader.pages[page_index])
     buf = BytesIO()
     writer.write(buf)
     buf.seek(0)
-    key = f'ctes/{upload_id}/{page_index}.pdf'
+    stem = nome_stem if nome_stem else f'pagina_{page_index}'
+    key = f'ctes/{stem}.pdf'
     default_storage.save(key, buf)
     return key
 
@@ -729,22 +831,50 @@ def _encontrar_cte_existente(filial, serie, numero_cte):
     ).first()
 
 
-def processar_ost_pdf(content: bytes) -> dict:
+def processar_ost_pdf(content: bytes, prefixo_nome_arquivo: Optional[str] = None) -> dict:
     """
-    Processa um PDF de OST: extrai dados, demembra por página, salva no MinIO e cria/atualiza registros OST.
-    content: bytes do arquivo PDF.
-    Retorna: dict com criados, atualizados, ignorados_duplicata, upload_id.
-    Levanta Exception em caso de erro.
+    Processa um PDF de OST.
+
+    Duplicata: mesma combinação **filial + série + documento + nota fiscal** já existe no BD **com PDF**
+    → não grava no MinIO nem altera o registo (conta em ignorados_duplicata).
+
+    Fluxo típico: PDF **multipágina** — cada folha é separada e hospedada. Nome = nº da NF
+    (``ost/7310980.pdf``); só se a mesma NF repetir noutra folha **neste** ficheiro é usado ``_pN``.
+    Sem NF na extração: fallback ``filial_serie_documento``.
+
+    Campo API ``prefixo_nome`` força novo nome (override); não contorna duplicata com PDF já guardado.
     """
     if not PdfReader or not PdfWriter:
         raise RuntimeError('Biblioteca pypdf não disponível para demembrar os PDFs.')
-    upload_id = uuid.uuid4().hex
+    n_pages = len(PdfReader(BytesIO(content)).pages)
     extrator = ExtratorOST(BytesIO(content))
     criados = 0
     atualizados = 0
     ignorados_duplicata = 0
+    chaves_pdf: List[str] = []
+    stems_neste_pdf: set = set()
+    prefixo_limpo = _sanitizar_nome_objeto_storage(prefixo_nome_arquivo, max_len=64) if prefixo_nome_arquivo else ''
+    forcar_novo_arquivo = bool(prefixo_limpo and prefixo_limpo != 'doc')
     for page_index, records in extrator.processar_pdf_por_pagina():
-        key = _demembrar_e_enviar_pagina_minio(content, page_index, upload_id)
+        key: Optional[str] = None
+        if records:
+            attrs0 = _dados_ost_para_model(records[0])
+            existente0 = _encontrar_ost_existente(
+                attrs0['filial'], attrs0['serie'], attrs0['documento'], attrs0['nota_fiscal']
+            )
+            if existente0 and existente0.pdf_storage_key:
+                key = existente0.pdf_storage_key
+                stems_neste_pdf.add(_stem_de_chave_storage(key))
+        if key is None:
+            if forcar_novo_arquivo:
+                base = _stem_apenas_numero_nota(prefixo_limpo) or prefixo_limpo
+            elif records:
+                base = _stem_base_ost(_dados_ost_para_model(records[0]))
+            else:
+                base = 'sem_identificacao'
+            nome_stem = _alocar_stem_multipagina(base, page_index, n_pages, stems_neste_pdf)
+            key = _demembrar_e_enviar_pagina_minio(content, page_index, nome_stem=nome_stem)
+        chaves_pdf.append(key)
         for d in records:
             attrs = _dados_ost_para_model(d)
             attrs['pdf_storage_key'] = key
@@ -766,26 +896,46 @@ def processar_ost_pdf(content: bytes) -> dict:
         'criados': criados,
         'atualizados': atualizados,
         'ignorados_duplicata': ignorados_duplicata,
-        'upload_id': upload_id,
+        'chaves_pdf': chaves_pdf,
     }
 
 
-def processar_cte_pdf(content: bytes) -> dict:
+def processar_cte_pdf(content: bytes, prefixo_nome_arquivo: Optional[str] = None) -> dict:
     """
-    Processa um PDF de CT-e: extrai dados, demembra por página, salva no MinIO e cria/atualiza registros CTe.
-    content: bytes do arquivo PDF.
-    Retorna: dict com criados, atualizados, ignorados_duplicata, upload_id.
-    Levanta Exception em caso de erro.
+    CT-e: duplicata (filial+série+nº CT-e com PDF) → sem novo MinIO.
+    Multipágina: mesma lógica de nomes que a OST (NF só dígitos; ``_pN`` só se NF repetida na mesma execução).
     """
     if not PdfReader or not PdfWriter:
         raise RuntimeError('Biblioteca pypdf não disponível para demembrar os PDFs.')
-    upload_id = uuid.uuid4().hex
+    n_pages = len(PdfReader(BytesIO(content)).pages)
     extrator = ExtratorCTe(BytesIO(content))
     criados = 0
     atualizados = 0
     ignorados_duplicata = 0
+    chaves_pdf: List[str] = []
+    stems_neste_pdf: set = set()
+    prefixo_limpo = _sanitizar_nome_objeto_storage(prefixo_nome_arquivo, max_len=64) if prefixo_nome_arquivo else ''
+    forcar_novo_arquivo = bool(prefixo_limpo and prefixo_limpo != 'doc')
     for page_index, records in extrator.processar_pdf_por_pagina():
-        key = _demembrar_e_enviar_pagina_minio_cte(content, page_index, upload_id)
+        key: Optional[str] = None
+        if records:
+            attrs0 = _dados_cte_para_model(records[0])
+            existente0 = _encontrar_cte_existente(
+                attrs0['filial'], attrs0['serie'], attrs0['numero_cte']
+            )
+            if existente0 and existente0.pdf_storage_key:
+                key = existente0.pdf_storage_key
+                stems_neste_pdf.add(_stem_de_chave_storage(key))
+        if key is None:
+            if forcar_novo_arquivo:
+                base = _stem_apenas_numero_nota(prefixo_limpo) or prefixo_limpo
+            elif records:
+                base = _stem_base_cte(_dados_cte_para_model(records[0]))
+            else:
+                base = 'sem_identificacao'
+            nome_stem = _alocar_stem_multipagina(base, page_index, n_pages, stems_neste_pdf)
+            key = _demembrar_e_enviar_pagina_minio_cte(content, page_index, nome_stem=nome_stem)
+        chaves_pdf.append(key)
         for d in records:
             attrs = _dados_cte_para_model(d)
             attrs['pdf_storage_key'] = key
@@ -807,7 +957,7 @@ def processar_cte_pdf(content: bytes) -> dict:
         'criados': criados,
         'atualizados': atualizados,
         'ignorados_duplicata': ignorados_duplicata,
-        'upload_id': upload_id,
+        'chaves_pdf': chaves_pdf,
     }
 
 
@@ -830,7 +980,8 @@ def processador_view(request):
                     partes.append(f"{result['atualizados']} atualizado(s) com PDF")
                 if result['ignorados_duplicata']:
                     partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
-                msg = f"OST: {'; '.join(partes)}. PDFs em ost/{result['upload_id']}/." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ost/{result['upload_id']}/."
+                arquivos = ', '.join(result['chaves_pdf'])
+                msg = f"OST: {'; '.join(partes)}. MinIO: {arquivos}." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). MinIO: {arquivos}."
                 messages.success(request, msg)
             except Exception as e:
                 messages.error(request, f'Erro ao processar PDF OST: {e}')
@@ -849,7 +1000,8 @@ def processador_view(request):
                     partes.append(f"{result['atualizados']} atualizado(s) com PDF")
                 if result['ignorados_duplicata']:
                     partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
-                msg = f"CT-e: {'; '.join(partes)}. PDFs em ctes/{result['upload_id']}/." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ctes/{result['upload_id']}/."
+                arquivos = ', '.join(result['chaves_pdf'])
+                msg = f"CT-e: {'; '.join(partes)}. MinIO: {arquivos}." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). MinIO: {arquivos}."
                 messages.success(request, msg)
             except Exception as e:
                 messages.error(request, f'Erro ao processar PDF CT-e: {e}')
@@ -865,8 +1017,8 @@ def processador_view(request):
 def api_processar_ost(request):
     """
     API: processa um PDF de OST enviado por multipart/form-data.
-    Campo do arquivo: 'pdf' (ou 'ost_pdf').
-    Retorna JSON com criados, atualizados, ignorados_duplicata, upload_id e mensagem.
+    Campos: 'pdf' ou 'ost_pdf'; opcional 'prefixo_nome' (nome alternativo se precisar).
+    Duplicata filial+série+documento+NF com PDF já no BD → sem upload. Chaves: preferência ``ost/7310980.pdf``.
     """
     pdf_file = request.FILES.get('pdf') or request.FILES.get('ost_pdf')
     if not pdf_file:
@@ -881,7 +1033,8 @@ def api_processar_ost(request):
         )
     try:
         content = b''.join(pdf_file.chunks())
-        result = processar_ost_pdf(content)
+        prefixo = (request.data.get('prefixo_nome') or '').strip()
+        result = processar_ost_pdf(content, prefixo_nome_arquivo=prefixo or None)
         partes = []
         if result['criados']:
             partes.append(f"{result['criados']} criado(s)")
@@ -889,14 +1042,15 @@ def api_processar_ost(request):
             partes.append(f"{result['atualizados']} atualizado(s) com PDF")
         if result['ignorados_duplicata']:
             partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
-        msg = f"OST: {'; '.join(partes)}. PDFs em ost/{result['upload_id']}/." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ost/{result['upload_id']}/."
+        arquivos = ', '.join(result['chaves_pdf'])
+        msg = f"OST: {'; '.join(partes)}. MinIO: {arquivos}." if partes else f"OST: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). MinIO: {arquivos}."
         return Response({
             'ok': True,
             'mensagem': msg,
             'criados': result['criados'],
             'atualizados': result['atualizados'],
             'ignorados_duplicata': result['ignorados_duplicata'],
-            'upload_id': result['upload_id'],
+            'chaves_pdf': result['chaves_pdf'],
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
@@ -910,8 +1064,8 @@ def api_processar_ost(request):
 def api_processar_cte(request):
     """
     API: processa um PDF de CT-e enviado por multipart/form-data.
-    Campo do arquivo: 'pdf' (ou 'cte_pdf').
-    Retorna JSON com criados, atualizados, ignorados_duplicata, upload_id e mensagem.
+    Campos: 'pdf' ou 'cte_pdf'; opcional 'prefixo_nome'. Resposta: 'chaves_pdf'.
+    Nome: NF-e ou número CT-e extraídos; multi-página: sufixo _pN.
     """
     pdf_file = request.FILES.get('pdf') or request.FILES.get('cte_pdf')
     if not pdf_file:
@@ -926,7 +1080,8 @@ def api_processar_cte(request):
         )
     try:
         content = b''.join(pdf_file.chunks())
-        result = processar_cte_pdf(content)
+        prefixo = (request.data.get('prefixo_nome') or '').strip()
+        result = processar_cte_pdf(content, prefixo_nome_arquivo=prefixo or None)
         partes = []
         if result['criados']:
             partes.append(f"{result['criados']} criado(s)")
@@ -934,14 +1089,15 @@ def api_processar_cte(request):
             partes.append(f"{result['atualizados']} atualizado(s) com PDF")
         if result['ignorados_duplicata']:
             partes.append(f"{result['ignorados_duplicata']} duplicata(s) ignorada(s)")
-        msg = f"CT-e: {'; '.join(partes)}. PDFs em ctes/{result['upload_id']}/." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). PDFs em ctes/{result['upload_id']}/."
+        arquivos = ', '.join(result['chaves_pdf'])
+        msg = f"CT-e: {'; '.join(partes)}. MinIO: {arquivos}." if partes else f"CT-e: nenhum registro novo. {result['ignorados_duplicata']} duplicata(s). MinIO: {arquivos}."
         return Response({
             'ok': True,
             'mensagem': msg,
             'criados': result['criados'],
             'atualizados': result['atualizados'],
             'ignorados_duplicata': result['ignorados_duplicata'],
-            'upload_id': result['upload_id'],
+            'chaves_pdf': result['chaves_pdf'],
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(

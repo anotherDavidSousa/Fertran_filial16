@@ -271,7 +271,7 @@ class OST(models.Model):
 
     chave_acesso = models.CharField('Chave de acesso NF', max_length=50, blank=True, db_index=True)
 
-    # PDF da página no MinIO (ost/{upload_id}/{page}.pdf)
+    # PDF da página no MinIO (ex.: ost/{nota_ou_documento}.pdf)
     pdf_storage_key = models.CharField(
         'Chave do PDF no MinIO',
         max_length=500,
