@@ -871,12 +871,12 @@ def api_processar_ost(request):
     pdf_file = request.FILES.get('pdf') or request.FILES.get('ost_pdf')
     if not pdf_file:
         return Response(
-            {'erro': 'Envie um arquivo PDF no campo "pdf" ou "ost_pdf".'},
+            {'ok': False, 'erro': 'Envie um arquivo PDF no campo "pdf" ou "ost_pdf".'},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if not (pdf_file.name or '').lower().endswith('.pdf'):
         return Response(
-            {'erro': 'O arquivo deve ser um PDF.'},
+            {'ok': False, 'erro': 'O arquivo deve ser um PDF.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
     try:
@@ -916,12 +916,12 @@ def api_processar_cte(request):
     pdf_file = request.FILES.get('pdf') or request.FILES.get('cte_pdf')
     if not pdf_file:
         return Response(
-            {'erro': 'Envie um arquivo PDF no campo "pdf" ou "cte_pdf".'},
+            {'ok': False, 'erro': 'Envie um arquivo PDF no campo "pdf" ou "cte_pdf".'},
             status=status.HTTP_400_BAD_REQUEST,
         )
     if not (pdf_file.name or '').lower().endswith('.pdf'):
         return Response(
-            {'erro': 'O arquivo deve ser um PDF.'},
+            {'ok': False, 'erro': 'O arquivo deve ser um PDF.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
     try:

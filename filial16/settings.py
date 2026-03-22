@@ -130,9 +130,10 @@ STORAGES = {
 
 MEDIA_URL = '/media/'
 
-# Upload de PDFs grandes (ex.: processador OST com centenas de páginas)
+# Upload de PDFs grandes (ex.: processador OST + integração n8n)
+# DATA_UPLOAD: corpo inteiro do POST; FILE_UPLOAD: buffer em memória antes de ir ao disco
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 250 * 1024 * 1024))  # 250 MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 10 * 1024 * 1024))   # 10 MB (acima disso vai para disco)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 50 * 1024 * 1024))   # 50 MB (guia n8n)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -140,10 +141,15 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
-# REST Framework + JWT (API para app externo)
+# REST Framework: API Key (n8n, X-Api-Key) → JWT (app) → Sessão (navegador)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'fila.api_key_auth.ApiKeyAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
     ],
 }
 SIMPLE_JWT = {

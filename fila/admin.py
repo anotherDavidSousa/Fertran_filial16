@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Carregamento, OST, CTe
+from .models import ApiKey, Carregamento, OST, CTe
+
+
+@admin.register(ApiKey)
+class ApiKeyAdmin(admin.ModelAdmin):
+    list_display = ('user', 'descricao', 'ativo', 'criado_em', 'ultimo_uso')
+    readonly_fields = ('token', 'criado_em', 'ultimo_uso')
+    list_filter = ('ativo',)
+    search_fields = ('descricao', 'user__username')
 
 
 @admin.register(Carregamento)

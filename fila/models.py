@@ -1,3 +1,5 @@
+import secrets
+
 from django.conf import settings
 from django.db import models
 from django.db.models.functions import Now
@@ -338,3 +340,35 @@ class CTe(models.Model):
 
     def __str__(self):
         return f'CT-e {self.filial}/{self.serie}/{self.numero_cte}' if (self.filial or self.serie or self.numero_cte) else f'CT-e #{self.pk}'
+
+
+class ApiKey(models.Model):
+    """Chave estática para integrações (ex.: n8n) com header X-Api-Key."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='api_keys',
+        verbose_name='Usuário',
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True, blank=True)
+    descricao = models.CharField('Descrição', max_length=200, blank=True)
+    ativo = models.BooleanField('Ativo', default=True)
+    criado_em = models.DateTimeField('Criado em', auto_now_add=True)
+    ultimo_uso = models.DateTimeField('Último uso', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'API Key'
+        verbose_name_plural = 'API Keys'
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_hex(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.descricao or self.token[:8]}… ({self.user})'
+
+    @classmethod
+    def gerar_para_usuario(cls, user, descricao=''):
+        return cls.objects.create(user=user, descricao=descricao)
