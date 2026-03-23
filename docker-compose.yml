@@ -13,7 +13,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       DJANGO_DEBUG: 0
-      ALLOWED_HOSTS: agregamentoipatinga.com,www.agregamentoipatinga.com
+      ALLOWED_HOSTS: agregamentoipatinga.com,www.agregamentoipatinga.com,filial16-web,localhost,127.0.0.1
       CSRF_TRUSTED_ORIGINS: https://agregamentoipatinga.com,https://www.agregamentoipatinga.com
       MINIO_ENDPOINT: filial16-minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}

@@ -240,7 +240,7 @@ class Carregamento(models.Model):
 
 class OST(models.Model):
     """
-    Ordem de Serviço de Transporte – dados extraídos do PDF (processador).
+    Ordem de Serviço de Transporte — dados normalmente enviados pelo n8n (extração fora do Django).
     Numero_ost é separado em Filial / Série / Documento.
     """
     # Numero OST separado em três colunas (ex.: 16.001.12345 → filial=16, serie=001, documento=12345)
@@ -292,8 +292,7 @@ class OST(models.Model):
 
 class CTe(models.Model):
     """
-    Conhecimento de Transporte Eletrônico – dados extraídos do PDF (processador de CT-e).
-    Uma página do PDF = um CTe. PDF da página é armazenado no MinIO (ctes/).
+    Conhecimento de Transporte Eletrônico — dados enviados pelo n8n; PDF no MinIO (ctes/…).
     """
     filial = models.CharField('Filial', max_length=20, blank=True, db_index=True)
     serie = models.CharField('Série', max_length=20, blank=True, db_index=True)

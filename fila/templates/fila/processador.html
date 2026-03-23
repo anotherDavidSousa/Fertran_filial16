@@ -1,69 +1,36 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Processador de PDFs{% endblock %}
+{% block title %}OST / CT-e — integração n8n{% endblock %}
 
 {% block content %}
 <div class="page-hero">
-    <h1>Processador de PDFs</h1>
-    <p class="description">CT-e, OST e Contratos. Selecione os arquivos PDF no seu computador para enviar.</p>
+    <h1>OST e CT-e</h1>
+    <p class="description">
+      O processamento de PDFs (desmembrar, extrair dados, comprimir e enviar ao MinIO) é feito pelo <strong>n8n</strong>.
+      O Django apenas recebe os dados já extraídos e a chave do ficheiro no MinIO, via API.
+    </p>
 </div>
 
-{% if messages %}
-<ul class="processador-messages">
-    {% for message in messages %}
-    <li class="message message-{{ message.tags }}">{{ message }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
-
-<form method="post" action="{% url 'processador' %}" enctype="multipart/form-data" class="processador-form">
-    {% csrf_token %}
-    <div class="processador-uploads">
-        <div class="upload-group">
-            <label for="id_pdf_geral">PDF (uma ou várias folhas)</label>
-            <input type="file" id="id_pdf_geral" name="pdf_geral" accept=".pdf">
-            <span class="upload-hint">Opcional</span>
-        </div>
-        <div class="upload-group upload-group-cte">
-            <label for="id_cte_pdf">CT-e (Conhecimento de Transporte Eletrônico)</label>
-            <input type="file" id="id_cte_pdf" name="cte_pdf" accept=".pdf">
-            <span class="upload-hint">PDF único ou várias páginas (1 página = 1 CT-e). Processado e importado para o banco; PDFs no MinIO (ctes/).</span>
-        </div>
-        <div class="upload-group upload-group-ost">
-            <label for="id_ost_pdf">OST (Ordem de Serviço de Transporte)</label>
-            <input type="file" id="id_ost_pdf" name="ost_pdf" accept=".pdf">
-            <span class="upload-hint">Processado e importado para o banco</span>
-        </div>
-        <div class="upload-group">
-            <label for="id_contratos_pdf">Contratos</label>
-            <input type="file" id="id_contratos_pdf" name="contratos_pdf" accept=".pdf">
-            <span class="upload-hint">Opcional</span>
-        </div>
-    </div>
-    <div class="processador-actions">
-        <button type="submit" class="btn-processador">Processar</button>
-    </div>
-</form>
+<div class="processador-info panel-detail" style="max-width:720px;">
+  <h2 style="margin-top:0;font-size:1.1rem;">Endpoints (POST JSON + header <code>X-Api-Key</code>)</h2>
+  <ul style="line-height:1.7;">
+    <li><code>POST /api/n8n/ost/</code> — corpo JSON com campos da OST + <code>pdf_storage_key</code> (ex.: <code>ost/7310980.pdf</code>)</li>
+    <li><code>POST /api/n8n/cte/</code> — corpo JSON com campos do CT-e + <code>pdf_storage_key</code> (ex.: <code>ctes/7310980.pdf</code>)</li>
+  </ul>
+  <p style="color:var(--text-secondary);font-size:0.9rem;">
+    Identificação OST: <code>filial</code>, <code>serie</code>, <code>documento</code> e <code>nota_fiscal</code> (lista ou string), ou <code>numero_ost</code> no formato <code>16.001.12345</code>.
+    Opcional: <code>apenas_criar: true</code> — se o registo já existir com PDF, não atualiza.
+  </p>
+  <p style="color:var(--text-secondary);font-size:0.9rem;">
+    Autenticação: mesma API Key configurada em <em>Admin → API Keys</em> (ou JWT de utilizador).
+  </p>
+</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-.processador-form { max-width: 560px; }
-.processador-messages { list-style: none; padding: 0; margin: 0 0 1rem 0; }
-.processador-messages .message { padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; }
-.processador-messages .message-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-.processador-messages .message-error { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.processador-messages .message-warning { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.processador-uploads { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem; }
-.upload-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.upload-group label { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); }
-.upload-group input[type="file"] { padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-page); color: var(--text-primary); font: inherit; }
-.upload-hint { font-size: 0.8rem; color: var(--text-secondary); }
-.upload-group-ost,
-.upload-group-cte { padding: 0.75rem; background: var(--accent-muted); border-radius: 10px; border: 1px solid var(--border); }
-.processador-actions { margin-top: 1rem; }
-.btn-processador { padding: 0.6rem 1.25rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-.btn-processador:hover { background: var(--accent-hover); }
+.processador-info { padding: 1.25rem; margin-top: 1rem; }
+.processador-info code { font-size: 0.88em; background: var(--accent-muted); padding: 0.1rem 0.35rem; border-radius: 4px; }
 </style>
 {% endblock %}

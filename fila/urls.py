@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import n8n_api
 
 urlpatterns = [
     path('', views.home_view, name='home'),
@@ -18,7 +19,7 @@ urlpatterns = [
     path('item/<int:pk>/download-xml/', views.item_download_xml, name='download_xml'),
     path('item/<int:pk>/download-ost-pdf/', views.item_download_ost_pdf, name='download_ost_pdf'),
     path('processador/', views.processador_view, name='processador'),
-    # API: processadores OST e CT-e recebem PDF por multipart/form-data
-    path('api/processar-ost/', views.api_processar_ost, name='api_processar_ost'),
-    path('api/processar-cte/', views.api_processar_cte, name='api_processar_cte'),
+    # API n8n: JSON com dados extraídos + pdf_storage_key (MinIO já preenchido pelo n8n)
+    path('api/n8n/ost/', n8n_api.api_n8n_ost_sync, name='api_n8n_ost_sync'),
+    path('api/n8n/cte/', n8n_api.api_n8n_cte_sync, name='api_n8n_cte_sync'),
 ]
