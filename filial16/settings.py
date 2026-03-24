@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'storages',
     'fila',
     'core',
+    'regras_api',
 ]
 
 MIDDLEWARE = [

@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', logout_view, name='logout'),
+    path('', include('regras_api.urls')),
     path('', include('fila.urls')),
     path('agregados/', include(('core.urls', 'core'), namespace='core')),
 ]
