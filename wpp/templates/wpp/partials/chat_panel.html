@@ -1,0 +1,271 @@
+{% load wpp_tags %}
+{% comment %}
+  Chat panel partial — rendered server-side on first load and returned as HTML
+  fragment for subsequent AJAX chat switches.
+  No <script> tags here — all JS lives in wpp_app.html.
+{% endcomment %}
+
+<!-- ── Chat header ──────────────────────────────────────────────────────────── -->
+<div class="wpp-chat-header" data-jid="{{ jid|escapejs }}">
+    {% if grupo %}
+    <div class="wpp-avatar wpp-avatar-md" style="background:{{ grupo.nome|avatar_color }}">
+        {{ grupo.nome|first|upper }}
+    </div>
+    <div class="wpp-chat-info">
+        <div class="wpp-chat-name">{{ grupo.nome|default:jid|truncatechars:45 }}</div>
+        <div class="wpp-chat-sub">
+            {% if grupo.placa_cavalo %}
+            <span class="wpp-placa-mini">{{ grupo.placa_cavalo }}</span>
+            {% endif %}
+            {% if carregamento %}
+            <span class="wpp-chat-nf">NF: {{ carregamento.nota_fiscal }}</span>
+            {% endif %}
+            {% if grupo.instance %}
+            <span class="wpp-chat-inst">{{ grupo.instance.nome }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="wpp-avatar wpp-avatar-md" style="background:#2a3942">?</div>
+    <div class="wpp-chat-info">
+        <div class="wpp-chat-name">{{ jid }}</div>
+    </div>
+    {% endif %}
+
+    <button class="wpp-icon-btn{% if carregamento or pendencias_grupo %} wpp-info-has-data{% endif %}"
+            id="wpp-info-toggle" title="Gerenciar grupo" type="button">
+        <!-- vertical dots menu -->
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+        {% with pend_count=pendencias_grupo|length %}
+        {% if pend_count %}<span class="wpp-badge wpp-badge-orange wpp-header-badge">{{ pend_count }}</span>{% endif %}
+        {% endwith %}
+    </button>
+</div>
+
+<!-- ── Body: messages + info drawer ────────────────────────────────────────── -->
+<div class="wpp-chat-body">
+
+    <!-- Messages -->
+    <div class="wpp-messages" id="wpp-messages">
+        {% if mensagens %}
+            {% for msg in mensagens %}
+            {% ifchanged msg.timestamp|date:"Y-m-d" %}
+            <div class="wpp-date-sep" aria-label="Separador de data">
+                <span>{{ msg.timestamp|date_label }}</span>
+            </div>
+            {% endifchanged %}
+
+            <div class="wpp-msg {% if msg.from_me %}wpp-out{% else %}wpp-in{% endif %}"
+                 data-id="{{ msg.pk }}" role="article">
+
+                {% if not msg.from_me %}
+                <span class="wpp-sender-name" style="color:{{ msg.sender_nome|avatar_color }}">
+                    {{ msg.sender_nome|default:msg.sender_jid|truncatechars:25 }}
+                </span>
+                {% endif %}
+
+                <div class="wpp-bubble">
+
+                    {% if msg.tipo == 'text' %}
+                        <span class="wpp-msg-text">{{ msg.texto|wpp_format|safe }}</span>
+
+                    {% elif msg.tipo == 'image' %}
+                        {% if msg.media_minio_key %}
+                        <div class="wpp-img-wrap">
+                            <img src="{% url 'wpp:media_proxy' msg.media_minio_key %}"
+                                 loading="lazy" class="wpp-img"
+                                 alt="Imagem"
+                                 onclick="WPP.lightbox(this.src)">
+                            {% if msg.texto %}
+                            <span class="wpp-img-caption">{{ msg.texto|wpp_format|safe }}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="wpp-msg-text wpp-media-na">📷 Foto (não disponível)</span>
+                        {% endif %}
+
+                    {% elif msg.tipo == 'audio' %}
+                        {% if msg.media_minio_key %}
+                        <div class="wpp-audio" data-src="{% url 'wpp:media_proxy' msg.media_minio_key %}">
+                            <button class="wpp-audio-btn" type="button" aria-label="Reproduzir áudio">
+                                <svg class="wpp-ico wpp-ico-play" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M8 5v14l11-7z"/>
+                                </svg>
+                                <svg class="wpp-ico wpp-ico-pause" viewBox="0 0 24 24" style="display:none">
+                                    <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                </svg>
+                            </button>
+                            <div class="wpp-audio-wave" aria-hidden="true"></div>
+                            <span class="wpp-audio-dur">0:00</span>
+                            <audio preload="none"></audio>
+                        </div>
+                        {% else %}
+                        <span class="wpp-msg-text wpp-media-na">🎤 Áudio (não disponível)</span>
+                        {% endif %}
+
+                    {% elif msg.tipo == 'video' %}
+                        {% if msg.media_minio_key %}
+                        <div class="wpp-video-wrap">
+                            <video class="wpp-video" controls preload="none"
+                                   src="{% url 'wpp:media_proxy' msg.media_minio_key %}">
+                            </video>
+                            {% if msg.texto %}
+                            <span class="wpp-img-caption">{{ msg.texto|wpp_format|safe }}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="wpp-msg-text wpp-media-na">📹 Vídeo (não disponível)</span>
+                        {% endif %}
+
+                    {% elif msg.tipo == 'document' %}
+                        {% if msg.media_minio_key %}
+                        <a class="wpp-doc"
+                           href="{% url 'wpp:media_proxy' msg.media_minio_key %}"
+                           target="_blank" rel="noopener" download>
+                            <span class="wpp-doc-icon" aria-hidden="true">📄</span>
+                            <span class="wpp-doc-info">
+                                <span class="wpp-doc-name">{{ msg.media_minio_key|basename }}</span>
+                                <span class="wpp-doc-type">Documento</span>
+                            </span>
+                            <span class="wpp-doc-dl" aria-hidden="true">⬇</span>
+                        </a>
+                        {% else %}
+                        <span class="wpp-msg-text wpp-media-na">📄 Documento (não disponível)</span>
+                        {% endif %}
+
+                    {% else %}
+                        <span class="wpp-msg-text wpp-media-na">
+                            📎 {{ msg.get_tipo_display }}{% if msg.texto %}: {{ msg.texto|truncatechars:60 }}{% endif %}
+                        </span>
+                    {% endif %}
+
+                    <div class="wpp-msg-meta">
+                        <span class="wpp-msg-time">{{ msg.timestamp|wpp_time }}</span>
+                        {% if msg.from_me %}<span class="wpp-ticks" aria-label="Enviado">✓✓</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="wpp-no-msgs">
+            <span>Nenhuma mensagem ainda neste grupo.</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Info drawer: pendências + carregamento -->
+    <div class="wpp-info-drawer" id="wpp-info-drawer">
+        <div class="wpp-drawer-scroll">
+
+            {% if carregamento %}
+            <div class="wpp-drawer-section">
+                <div class="wpp-drawer-title">Carregamento ativo</div>
+                <div class="wpp-info-card">
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">NF</span>
+                        <span>{{ carregamento.nota_fiscal|default:"—" }}</span>
+                    </div>
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">Produto</span>
+                        <span>{{ carregamento.xProd_produto|truncatechars:50|default:"—" }}</span>
+                    </div>
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">Emitente</span>
+                        <span>{{ carregamento.emit_nome|truncatechars:35|default:"—" }}</span>
+                    </div>
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">Destinatário</span>
+                        <span>{{ carregamento.dest_nome|truncatechars:35|default:"—" }}</span>
+                    </div>
+                    {% if carregamento.qCom_peso %}
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">Peso</span>
+                        <span>{{ carregamento.qCom_peso|floatformat:0 }} kg</span>
+                    </div>
+                    {% endif %}
+                    {% if carregamento.fluxo %}
+                    <div class="wpp-info-row">
+                        <span class="wpp-info-lbl">Fluxo</span>
+                        <span>{{ carregamento.fluxo }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="wpp-drawer-section">
+                <div class="wpp-drawer-title-row">
+                    <span class="wpp-drawer-title">Pendências</span>
+                    <button class="wpp-btn wpp-btn-sm" id="btn-add-pend" type="button">+ Nova</button>
+                </div>
+
+                <div class="wpp-pend-form" id="pend-form" style="display:none">
+                    <textarea class="wpp-pend-input" placeholder="Descreva a pendência…" rows="2"></textarea>
+                    <div class="wpp-pend-form-actions">
+                        <button class="wpp-btn wpp-btn-sm wpp-btn-green" id="btn-pend-save" type="button">Salvar</button>
+                        <button class="wpp-btn wpp-btn-sm wpp-btn-ghost" id="btn-pend-cancel" type="button">Cancelar</button>
+                    </div>
+                </div>
+
+                <div class="pend-list" id="pend-list">
+                    {% for p in pendencias_grupo %}
+                    {% if p.status == 'aberta' %}
+                    <div class="pend-item pend-open">
+                        <div class="pend-text">{{ p.texto }}</div>
+                        <div class="pend-meta">
+                            <span class="pend-author">{{ p.criado_por.get_full_name|default:p.criado_por.username|default:"—" }}</span>
+                            <span class="pend-date">{{ p.criado_em|date:"d/m H:i" }}</span>
+                            <button class="btn-pend-resolve" type="button" data-id="{{ p.pk }}">Resolver</button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                {% with resolvidas=pendencias_grupo %}
+                {% if resolvidas %}
+                <details class="pend-historico">
+                    <summary>Histórico de resolvidas</summary>
+                    <div>
+                        {% for p in resolvidas %}
+                        {% if p.status == 'resolvida' %}
+                        <div class="pend-item pend-done">
+                            <div class="pend-text">{{ p.texto }}</div>
+                            <div class="pend-meta">
+                                <span class="pend-author">{{ p.resolvido_por.get_full_name|default:p.resolvido_por.username|default:"—" }}</span>
+                                <span class="pend-date">{{ p.resolvido_em|date:"d/m H:i" }}</span>
+                                {% if p.arquivou_carregamento %}
+                                <span class="pend-archived">arquivou NF</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Compose bar ──────────────────────────────────────────────────────────── -->
+<div class="wpp-compose" id="wpp-compose">
+    <textarea
+        class="wpp-compose-input"
+        id="wpp-input"
+        placeholder="Digite uma mensagem"
+        rows="1"
+        aria-label="Mensagem"
+    ></textarea>
+    <button class="wpp-send-btn" id="wpp-send" type="button" aria-label="Enviar mensagem">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+    </button>
+</div>

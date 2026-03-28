@@ -2,8 +2,9 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Count, OuterRef, Q, Subquery
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -14,38 +15,85 @@ from .models import GrupoConfig, Mensagem, Pendencia, WppInstance
 
 logger = logging.getLogger(__name__)
 
+# ── Shared queryset helper ─────────────────────────────────────────────────────
+
+def _grupos_qs():
+    """Groups annotated with last message preview and open pendência count."""
+    last = Mensagem.objects.filter(jid_chat=OuterRef('jid')).order_by('-timestamp')
+    return (
+        GrupoConfig.objects
+        .filter(ativo=True)
+        .select_related('instance')
+        .annotate(
+            last_msg_texto=Subquery(last.values('texto')[:1]),
+            last_msg_time=Subquery(last.values('timestamp')[:1]),
+            last_msg_tipo=Subquery(last.values('tipo')[:1]),
+            pendencias_abertas_count=Count(
+                'pendencias', filter=Q(pendencias__status=Pendencia.STATUS_ABERTA)
+            ),
+        )
+        .order_by('-last_msg_time', 'nome')
+    )
+
+
+def _chat_context(jid):
+    """Returns (grupo, mensagens, pendencias, carregamento) for a given JID."""
+    grupo = GrupoConfig.objects.filter(jid=jid).select_related('instance').first()
+    if not grupo:
+        return None, [], [], None
+    mensagens = list(
+        Mensagem.objects
+        .filter(jid_chat=jid)
+        .order_by('timestamp')
+        .select_related('enviado_por')
+    )[-100:]
+    pendencias_grupo = list(
+        grupo.pendencias
+        .select_related('criado_por', 'resolvido_por')
+        .order_by('-criado_em')
+    )
+    carregamento = grupo.carregamento_ativo()
+    return grupo, mensagens, pendencias_grupo, carregamento
+
 
 # ── Page views ─────────────────────────────────────────────────────────────────
 
 @login_required
 @require_menu_perm('wpp')
-def inbox(request):
-    grupos = GrupoConfig.objects.filter(ativo=True).select_related('instance').order_by('nome')
-    pendencias_abertas = Pendencia.objects.filter(status=Pendencia.STATUS_ABERTA).count()
-    return render(request, 'wpp/inbox.html', {
+def inbox(request, jid=None):
+    """Main WhatsApp-like shell — group list + optional pre-loaded chat."""
+    grupos = _grupos_qs()
+
+    active_grupo, mensagens, pendencias_grupo, carregamento = None, [], [], None
+    if jid:
+        active_grupo, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
+
+    try:
+        perfil = request.user.wpp_perfil
+    except Exception:
+        perfil = None
+
+    return render(request, 'wpp/wpp_app.html', {
         'grupos': grupos,
-        'pendencias_abertas': pendencias_abertas,
+        'active_jid': jid or '',
+        'active_grupo': active_grupo,
+        'mensagens': mensagens,
+        'pendencias_grupo': pendencias_grupo,
+        'carregamento': carregamento,
+        'perfil': perfil,
     })
 
 
 @login_required
 @require_menu_perm('wpp')
-def chat(request, jid):
-    grupo = GrupoConfig.objects.filter(jid=jid).select_related('instance').first()
-    pendencias = []
-    carregamento = None
-    if grupo:
-        pendencias = list(
-            grupo.pendencias.select_related('criado_por', 'resolvido_por').order_by('-criado_em')
-        )
-        carregamento = grupo.carregamento_ativo()
-    # Last 50 messages for initial render
-    mensagens = Mensagem.objects.filter(jid_chat=jid).order_by('timestamp').select_related('enviado_por')[:50]
-    return render(request, 'wpp/chat.html', {
+def chat_partial(request, jid):
+    """Returns HTML partial for the chat panel — called via AJAX when switching groups."""
+    grupo, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
+    return render(request, 'wpp/partials/chat_panel.html', {
         'grupo': grupo,
         'jid': jid,
         'mensagens': mensagens,
-        'pendencias': pendencias,
+        'pendencias_grupo': pendencias_grupo,
         'carregamento': carregamento,
     })
 
@@ -97,7 +145,35 @@ def config(request):
     })
 
 
-# ── AJAX endpoints ─────────────────────────────────────────────────────────────
+# ── AJAX / API endpoints ───────────────────────────────────────────────────────
+
+@login_required
+@require_menu_perm('wpp')
+def grupos_json(request):
+    """Group list with last message preview and pending counts — used to refresh left panel."""
+    _type_icon = {
+        'image': '📷 Foto', 'audio': '🎤 Áudio',
+        'video': '📹 Vídeo', 'document': '📄 Documento',
+    }
+    result = []
+    for g in _grupos_qs():
+        if g.last_msg_tipo and g.last_msg_tipo != 'text':
+            preview = _type_icon.get(g.last_msg_tipo, '📎 Mídia')
+        elif g.last_msg_texto:
+            preview = g.last_msg_texto[:60]
+        else:
+            preview = ''
+
+        result.append({
+            'jid': g.jid,
+            'nome': g.nome or g.jid,
+            'placa_cavalo': g.placa_cavalo,
+            'preview': preview,
+            'last_time': g.last_msg_time.isoformat() if g.last_msg_time else None,
+            'pend_count': g.pendencias_abertas_count,
+        })
+    return JsonResponse({'grupos': result})
+
 
 @login_required
 @require_menu_perm('wpp')
@@ -116,10 +192,9 @@ def mensagens_json(request, jid):
             'media_minio_key', 'timestamp', 'enviado_por__username',
         )
     )
-    # Convert datetimes to ISO strings for JSON
     for m in msgs:
         if m['timestamp']:
-            m['timestamp'] = m['timestamp'].isoformat()
+            m['timestamp'] = timezone.localtime(m['timestamp']).isoformat()
     return JsonResponse({'mensagens': msgs})
 
 
@@ -154,7 +229,11 @@ def enviar_mensagem(request, jid):
     if not ok:
         return JsonResponse({'erro': resp}, status=502)
 
-    msg_id = resp.get('id') or resp.get('messageid') or f'sent-{jid}-{timezone.now().timestamp()}'
+    msg_id = (
+        resp.get('id') or resp.get('messageid')
+        or f'sent-{jid}-{timezone.now().timestamp()}'
+    )
+    now = timezone.now()
     msg = Mensagem.objects.create(
         msg_id=msg_id,
         grupo=GrupoConfig.objects.filter(jid=jid).first(),
@@ -164,9 +243,15 @@ def enviar_mensagem(request, jid):
         enviado_por=request.user,
         tipo=Mensagem.TYPE_TEXT,
         texto=mensagem_final,
-        timestamp=timezone.now(),
+        timestamp=now,
     )
-    return JsonResponse({'ok': True, 'id': msg.pk})
+    return JsonResponse({
+        'ok': True,
+        'id': msg.pk,
+        'timestamp': timezone.localtime(now).isoformat(),
+        'sender_nome': msg.sender_nome,
+        'texto': mensagem_final,
+    })
 
 
 @login_required
@@ -191,8 +276,9 @@ def criar_pendencia(request):
     return JsonResponse({
         'ok': True,
         'id': p.pk,
-        'criado_em': p.criado_em.isoformat(),
+        'criado_em': timezone.localtime(p.criado_em).isoformat(),
         'criado_por': request.user.get_full_name() or request.user.username,
+        'texto': texto,
     })
 
 
@@ -216,7 +302,7 @@ def resolver_pendencia(request, pk):
     return JsonResponse({
         'ok': True,
         'arquivou_carregamento': arquivou,
-        'resolvido_em': p.resolvido_em.isoformat(),
+        'resolvido_em': timezone.localtime(p.resolvido_em).isoformat(),
     })
 
 
@@ -256,11 +342,20 @@ def sync_grupos(request):
     return JsonResponse({'ok': True, 'grupos_sincronizados': count})
 
 
+@login_required
+@require_menu_perm('wpp')
+def media_proxy(request, key):
+    """Authenticated redirect to the MinIO/S3 media URL."""
+    from django.core.files.storage import default_storage
+    url = default_storage.url(key)
+    return HttpResponseRedirect(url)
+
+
 # ── Webhook (no session auth) ──────────────────────────────────────────────────
 
 @csrf_exempt
 def webhook(request):
-    """Receives UAZAPI webhook events. Authenticated via token header (optional)."""
+    """Receives UAZAPI webhook events. Authenticated via optional token header."""
     if request.method != 'POST':
         return HttpResponse(status=405)
 
