@@ -10,4 +10,5 @@ urlpatterns = [
     path('', include('regras_api.urls')),
     path('', include('fila.urls')),
     path('agregados/', include(('core.urls', 'core'), namespace='core')),
+    path('wpp/', include(('wpp.urls', 'wpp'), namespace='wpp')),
 ]

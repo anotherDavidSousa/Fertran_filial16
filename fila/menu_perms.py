@@ -7,6 +7,8 @@ from django.http import HttpResponseForbidden
 
 # Nome do grupo com acesso limitado (apenas Fila, Manifestados, Cavalos)
 GROUP_OPERADORES = 'Operadores'
+# Nome do grupo com acesso ao módulo WhatsApp
+GROUP_OPERADORES_WPP = 'Operadores WPP'
 
 
 def _user_has_full_access(user):
@@ -23,6 +25,13 @@ def _user_is_operador(user):
     return user.groups.filter(name=GROUP_OPERADORES).exists()
 
 
+def _user_is_operador_wpp(user):
+    """Pertence ao grupo com acesso ao módulo WhatsApp."""
+    if not user or not user.is_authenticated:
+        return False
+    return user.groups.filter(name=GROUP_OPERADORES_WPP).exists()
+
+
 def user_menu_permissions(user):
     """
     Retorna um dicionário com as permissões de menu para o usuário.
@@ -36,6 +45,7 @@ def user_menu_permissions(user):
         'can_see_processador': False,
         'can_see_cavalos': False,
         'can_see_agregamento': False,  # Dashboard, Carretas, Motoristas, Proprietários, Gestores, Logs
+        'can_see_wpp': False,
     }
     if not user or not user.is_authenticated:
         perms['can_see_home'] = False
@@ -45,10 +55,13 @@ def user_menu_permissions(user):
         perms['can_see_processador'] = True
         perms['can_see_cavalos'] = True
         perms['can_see_agregamento'] = True
+        perms['can_see_wpp'] = True
         return perms
     if _user_is_operador(user):
         perms['can_see_fila'] = True
         perms['can_see_cavalos'] = True
+    if _user_is_operador_wpp(user):
+        perms['can_see_wpp'] = True
     return perms
 
 

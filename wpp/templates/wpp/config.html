@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}WhatsApp — Configurações{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'wpp/css/wpp.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Configurações WhatsApp</h1>
+    <a href="{% url 'wpp:inbox' %}" class="btn btn-secondary">&larr; Grupos</a>
+</div>
+
+<div class="config-grid">
+
+    <!-- Assinatura do usuário -->
+    <div class="config-card">
+        <h2 class="config-card-title">Minha assinatura</h2>
+        <p class="config-card-desc">
+            Texto exibido em negrito antes de cada mensagem que você enviar.
+            Ex.: <strong>João:</strong> texto da mensagem…
+        </p>
+        <form method="post" action="{% url 'wpp:config' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="assinatura" class="form-label">Assinatura</label>
+                <input
+                    type="text"
+                    id="assinatura"
+                    name="assinatura"
+                    class="form-input"
+                    value="{{ perfil.assinatura|default:'' }}"
+                    maxlength="50"
+                    placeholder="Ex.: João"
+                >
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </form>
+    </div>
+
+    <!-- Instâncias UAZAPI -->
+    <div class="config-card">
+        <h2 class="config-card-title">Instâncias UAZAPI</h2>
+        {% if instances %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Status</th>
+                    <th>Criado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inst in instances %}
+                <tr>
+                    <td>{{ inst.nome }}</td>
+                    <td>
+                        {% if inst.ativo %}
+                        <span class="badge-ativo">Ativo</span>
+                        {% else %}
+                        <span class="badge-inativo">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ inst.criado_em|date:"d/m/Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-secondary">Nenhuma instância cadastrada. Crie pelo <a href="/admin/wpp/wppinstance/add/">Admin</a>.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

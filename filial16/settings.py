@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'fila',
     'core',
     'regras_api',
+    'wpp',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +68,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'fila.context_processors.total_fila',
                 'fila.context_processors.menu_permissions',
+                'wpp.context_processors.wpp_pendencias',
             ],
         },
     },
@@ -157,6 +159,10 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+# UAZAPI (WhatsApp API)
+UAZAPI_BASE_URL = os.environ.get('UAZAPI_BASE_URL', '')
+UAZAPI_WEBHOOK_SECRET = os.environ.get('UAZAPI_WEBHOOK_SECRET', '')
 
 # Google Sheets (Agregamento - Cavalos)
 GOOGLE_SHEETS_ENABLED = os.environ.get('GOOGLE_SHEETS_ENABLED', '0').lower() in ('1', 'true', 'yes')

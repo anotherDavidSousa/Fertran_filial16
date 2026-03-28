@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}WhatsApp — Grupos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'wpp/css/wpp.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">WhatsApp — Grupos</h1>
+    <div class="page-actions">
+        {% if pendencias_abertas %}
+        <a href="{% url 'wpp:pendencias' %}" class="btn btn-warning">
+            Pendências abertas: {{ pendencias_abertas }}
+        </a>
+        {% endif %}
+        <button type="button" class="btn btn-secondary" id="btn-sync-grupos">
+            Sincronizar grupos
+        </button>
+    </div>
+</div>
+
+{% if grupos %}
+<div class="wpp-grupo-grid">
+    {% for grupo in grupos %}
+    <a href="{% url 'wpp:chat' grupo.jid %}" class="wpp-grupo-card">
+        <div class="wpp-grupo-card-header">
+            <span class="wpp-grupo-nome">{{ grupo.nome|default:grupo.jid }}</span>
+            {% if grupo.placa_cavalo %}
+            <span class="wpp-placa">{{ grupo.placa_cavalo }}</span>
+            {% endif %}
+        </div>
+        {% with pend=grupo.pendencias.all|length %}
+        {% if pend %}
+        <div class="wpp-grupo-card-footer">
+            <span class="nav-badge nav-badge-alert">{{ pend }} pendência{{ pend|pluralize }}</span>
+        </div>
+        {% endif %}
+        {% endwith %}
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>Nenhum grupo configurado.</p>
+    <p>Clique em <strong>Sincronizar grupos</strong> para importar os grupos da instância UAZAPI.</p>
+</div>
+{% endif %}
+
+<div id="sync-status" class="sync-status" style="display:none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('btn-sync-grupos').addEventListener('click', function () {
+    const btn = this;
+    const status = document.getElementById('sync-status');
+    btn.disabled = true;
+    btn.textContent = 'Sincronizando…';
+    status.style.display = 'none';
+
+    fetch('{% url "wpp:sync_grupos" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            status.textContent = `${data.grupos_sincronizados} grupo(s) sincronizado(s). Recarregando…`;
+            status.className = 'sync-status sync-ok';
+            status.style.display = '';
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            status.textContent = 'Erro: ' + (data.erro || 'desconhecido');
+            status.className = 'sync-status sync-erro';
+            status.style.display = '';
+            btn.disabled = false;
+            btn.textContent = 'Sincronizar grupos';
+        }
+    })
+    .catch(() => {
+        status.textContent = 'Erro de comunicação.';
+        status.className = 'sync-status sync-erro';
+        status.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Sincronizar grupos';
+    });
+});
+</script>
+{% endblock %}
