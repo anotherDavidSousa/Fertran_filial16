@@ -6,6 +6,7 @@
 {% endcomment %}
 
 <!-- ── Chat header ──────────────────────────────────────────────────────────── -->
+{% with chat_nome=grupo.nome|default:contato.nome|default:jid %}
 <div class="wpp-chat-header" data-jid="{{ jid|escapejs }}">
     {% if grupo %}
     <div class="wpp-avatar wpp-avatar-md" style="background:{{ grupo.nome|avatar_color }}">
@@ -25,6 +26,16 @@
             {% endif %}
         </div>
     </div>
+    {% elif contato %}
+    <div class="wpp-avatar wpp-avatar-md wpp-avatar-contato" style="background:{{ contato.nome|avatar_color }}">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+    </div>
+    <div class="wpp-chat-info">
+        <div class="wpp-chat-name">{{ contato.nome|default:jid|truncatechars:45 }}</div>
+        <div class="wpp-chat-sub">
+            {% if contato.telefone %}<span>{{ contato.telefone }}</span>{% endif %}
+        </div>
+    </div>
     {% else %}
     <div class="wpp-avatar wpp-avatar-md" style="background:#2a3942">?</div>
     <div class="wpp-chat-info">
@@ -32,9 +43,9 @@
     </div>
     {% endif %}
 
+    {% if grupo %}
     <button class="wpp-icon-btn{% if carregamento or pendencias_grupo %} wpp-info-has-data{% endif %}"
             id="wpp-info-toggle" title="Gerenciar grupo" type="button">
-        <!-- vertical dots menu -->
         <svg viewBox="0 0 24 24" fill="currentColor">
             <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
         </svg>
@@ -42,7 +53,9 @@
         {% if pend_count %}<span class="wpp-badge wpp-badge-orange wpp-header-badge">{{ pend_count }}</span>{% endif %}
         {% endwith %}
     </button>
+    {% endif %}
 </div>
+{% endwith %}
 
 <!-- ── Body: messages + info drawer ────────────────────────────────────────── -->
 <div class="wpp-chat-body">
@@ -155,7 +168,8 @@
         {% endif %}
     </div>
 
-    <!-- Info drawer: pendências + carregamento -->
+    <!-- Info drawer: pendências + carregamento (groups only) -->
+    {% if grupo %}
     <div class="wpp-info-drawer" id="wpp-info-drawer">
         <div class="wpp-drawer-scroll">
 
@@ -251,6 +265,7 @@
 
         </div>
     </div>
+    {% endif %}{# grupo #}
 
 </div>
 

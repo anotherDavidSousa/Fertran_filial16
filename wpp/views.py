@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timezone as dt_tz
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, OuterRef, Q, Subquery
@@ -11,11 +12,11 @@ from django.views.decorators.http import require_POST
 
 from fila.menu_perms import require_menu_perm
 
-from .models import GrupoConfig, Mensagem, Pendencia, WppInstance
+from .models import Contato, GrupoConfig, Mensagem, Pendencia, WppInstance
 
 logger = logging.getLogger(__name__)
 
-# ── Shared queryset helper ─────────────────────────────────────────────────────
+# ── Shared queryset helpers ────────────────────────────────────────────────────
 
 def _grupos_qs():
     """Groups annotated with last message preview and open pendência count."""
@@ -36,24 +37,76 @@ def _grupos_qs():
     )
 
 
+def _contatos_qs():
+    """Contacts that have at least one message, annotated with last message info."""
+    last = Mensagem.objects.filter(jid_chat=OuterRef('jid')).order_by('-timestamp')
+    return (
+        Contato.objects
+        .annotate(
+            last_msg_texto=Subquery(last.values('texto')[:1]),
+            last_msg_time=Subquery(last.values('timestamp')[:1]),
+            last_msg_tipo=Subquery(last.values('tipo')[:1]),
+        )
+        .filter(last_msg_time__isnull=False)
+        .order_by('-last_msg_time', 'nome')
+    )
+
+
+def _conversas_list():
+    """Merged, time-sorted list of groups + contacts as plain dicts for the sidebar."""
+    _epoch = datetime(1970, 1, 1, tzinfo=dt_tz.utc)
+    conversas = []
+    for g in _grupos_qs():
+        conversas.append({
+            'jid': g.jid,
+            'nome': g.nome or g.jid,
+            'tipo': 'grupo',
+            'last_msg_texto': g.last_msg_texto,
+            'last_msg_time': g.last_msg_time,
+            'last_msg_tipo': g.last_msg_tipo,
+            'placa_cavalo': g.placa_cavalo,
+            'pendencias_abertas_count': g.pendencias_abertas_count,
+        })
+    for c in _contatos_qs():
+        conversas.append({
+            'jid': c.jid,
+            'nome': c.nome or c.jid,
+            'tipo': 'contato',
+            'last_msg_texto': c.last_msg_texto,
+            'last_msg_time': c.last_msg_time,
+            'last_msg_tipo': c.last_msg_tipo,
+            'placa_cavalo': '',
+            'pendencias_abertas_count': 0,
+        })
+    conversas.sort(key=lambda x: x['last_msg_time'] or _epoch, reverse=True)
+    return conversas
+
+
 def _chat_context(jid):
-    """Returns (grupo, mensagens, pendencias, carregamento) for a given JID."""
+    """Returns (grupo, contato, mensagens, pendencias, carregamento) for a given JID."""
     grupo = GrupoConfig.objects.filter(jid=jid).select_related('instance').first()
+    contato = None
     if not grupo:
-        return None, [], [], None
+        contato = Contato.objects.filter(jid=jid).first()
+
     mensagens = list(
         Mensagem.objects
         .filter(jid_chat=jid)
         .order_by('timestamp')
         .select_related('enviado_por')
     )[-100:]
-    pendencias_grupo = list(
-        grupo.pendencias
-        .select_related('criado_por', 'resolvido_por')
-        .order_by('-criado_em')
-    )
-    carregamento = grupo.carregamento_ativo()
-    return grupo, mensagens, pendencias_grupo, carregamento
+
+    pendencias_grupo = []
+    carregamento = None
+    if grupo:
+        pendencias_grupo = list(
+            grupo.pendencias
+            .select_related('criado_por', 'resolvido_por')
+            .order_by('-criado_em')
+        )
+        carregamento = grupo.carregamento_ativo()
+
+    return grupo, contato, mensagens, pendencias_grupo, carregamento
 
 
 # ── Page views ─────────────────────────────────────────────────────────────────
@@ -61,12 +114,12 @@ def _chat_context(jid):
 @login_required
 @require_menu_perm('wpp')
 def inbox(request, jid=None):
-    """Main WhatsApp-like shell — group list + optional pre-loaded chat."""
-    grupos = _grupos_qs()
+    """Main WhatsApp-like shell — conversation list + optional pre-loaded chat."""
+    conversas = _conversas_list()
 
-    active_grupo, mensagens, pendencias_grupo, carregamento = None, [], [], None
+    active_grupo, active_contato, mensagens, pendencias_grupo, carregamento = None, None, [], [], None
     if jid:
-        active_grupo, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
+        active_grupo, active_contato, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
 
     try:
         perfil = request.user.wpp_perfil
@@ -74,9 +127,10 @@ def inbox(request, jid=None):
         perfil = None
 
     return render(request, 'wpp/wpp_app.html', {
-        'grupos': grupos,
+        'conversas': conversas,
         'active_jid': jid or '',
         'active_grupo': active_grupo,
+        'active_contato': active_contato,
         'mensagens': mensagens,
         'pendencias_grupo': pendencias_grupo,
         'carregamento': carregamento,
@@ -87,10 +141,11 @@ def inbox(request, jid=None):
 @login_required
 @require_menu_perm('wpp')
 def chat_partial(request, jid):
-    """Returns HTML partial for the chat panel — called via AJAX when switching groups."""
-    grupo, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
+    """Returns HTML partial for the chat panel — called via AJAX when switching conversations."""
+    grupo, contato, mensagens, pendencias_grupo, carregamento = _chat_context(jid)
     return render(request, 'wpp/partials/chat_panel.html', {
         'grupo': grupo,
+        'contato': contato,
         'jid': jid,
         'mensagens': mensagens,
         'pendencias_grupo': pendencias_grupo,
@@ -150,27 +205,29 @@ def config(request):
 @login_required
 @require_menu_perm('wpp')
 def grupos_json(request):
-    """Group list with last message preview and pending counts — used to refresh left panel."""
+    """Conversation list (groups + contacts) with last message preview — used to refresh left panel."""
     _type_icon = {
         'image': '📷 Foto', 'audio': '🎤 Áudio',
         'video': '📹 Vídeo', 'document': '📄 Documento',
     }
     result = []
-    for g in _grupos_qs():
-        if g.last_msg_tipo and g.last_msg_tipo != 'text':
-            preview = _type_icon.get(g.last_msg_tipo, '📎 Mídia')
-        elif g.last_msg_texto:
-            preview = g.last_msg_texto[:60]
+    for c in _conversas_list():
+        tipo = c['last_msg_tipo']
+        if tipo and tipo != 'text':
+            preview = _type_icon.get(tipo, '📎 Mídia')
+        elif c['last_msg_texto']:
+            preview = c['last_msg_texto'][:60]
         else:
             preview = ''
 
         result.append({
-            'jid': g.jid,
-            'nome': g.nome or g.jid,
-            'placa_cavalo': g.placa_cavalo,
+            'jid': c['jid'],
+            'nome': c['nome'],
+            'tipo': c['tipo'],
+            'placa_cavalo': c['placa_cavalo'],
             'preview': preview,
-            'last_time': g.last_msg_time.isoformat() if g.last_msg_time else None,
-            'pend_count': g.pendencias_abertas_count,
+            'last_time': c['last_msg_time'].isoformat() if c['last_msg_time'] else None,
+            'pend_count': c['pendencias_abertas_count'],
         })
     return JsonResponse({'grupos': result})
 
@@ -234,9 +291,12 @@ def enviar_mensagem(request, jid):
         or f'sent-{jid}-{timezone.now().timestamp()}'
     )
     now = timezone.now()
+    grupo_obj = GrupoConfig.objects.filter(jid=jid).first()
+    contato_obj = None if grupo_obj else Contato.objects.filter(jid=jid).first()
     msg = Mensagem.objects.create(
         msg_id=msg_id,
-        grupo=GrupoConfig.objects.filter(jid=jid).first(),
+        grupo=grupo_obj,
+        contato=contato_obj,
         jid_chat=jid,
         sender_nome=assinatura or request.user.get_full_name() or request.user.username,
         from_me=True,

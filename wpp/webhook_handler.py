@@ -209,7 +209,20 @@ def handle_message(payload: dict):
     if is_group:
         grupo = GrupoConfig.objects.filter(jid=chat_jid).first()
         if not grupo:
-            logger.info('WPP msg for unknown group %s — storing without grupo link', chat_jid)
+            # Auto-create group on first message received
+            instance = WppInstance.objects.filter(ativo=True).first()
+            if instance:
+                chat_name = (
+                    payload.get('chat', {}).get('name') or
+                    payload.get('chat', {}).get('subject') or
+                    chat_jid
+                )
+                grupo, created = GrupoConfig.objects.get_or_create(
+                    jid=chat_jid,
+                    defaults={'instance': instance, 'nome': chat_name},
+                )
+                if created:
+                    logger.info('WPP auto-created GrupoConfig jid=%s nome=%r', chat_jid, chat_name)
     else:
         contato, _ = Contato.objects.get_or_create(
             jid=sender_jid or chat_jid,
