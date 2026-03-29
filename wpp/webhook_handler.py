@@ -175,11 +175,13 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
                         ext = (os.path.splitext(fn)[1] if fn else '') or \
                               (mimetypes.guess_extension(mime) or '')
                         filename = f'{msg_type}{ext}'
-                    elif resp.get('url'):
-                        dl_url = resp['url']
-                        logger.info('WPP media: downloading from url=%r for msg_id=%s', dl_url, msg_id)
+                    elif resp.get('fileURL') or resp.get('url'):
+                        dl_url = resp.get('fileURL') or resp.get('url')
+                        logger.info('WPP media: downloading from fileURL=%r for msg_id=%s', dl_url, msg_id)
                         content = _fetch_media(dl_url, inst.token)
-                        ext = os.path.splitext(dl_url.split('?')[0])[1] or ''
+                        mime = resp.get('mimetype') or resp.get('mimeType') or ''
+                        ext = (os.path.splitext(dl_url.split('?')[0])[1] if dl_url else '') or \
+                              (mimetypes.guess_extension(mime) or '')
                         filename = f'{msg_type}{ext}'
                 if not content:
                     logger.warning('WPP media: UAZAPI download returned no content for msg_id=%s', msg_id)
@@ -297,18 +299,19 @@ def handle_message(payload: dict):
         msg_obj.get('caption') or msg_obj.get('message') or ''
     )
 
-    # Media URL — UAZAPI may use 'content', 'mediaUrl', 'fileURL', or 'url'
+    # Media URL — UAZAPI may use 'content' (dict or str), 'mediaUrl', 'fileURL', 'url'
     _content = msg_obj.get('content') or ''
+    # content can be a dict like {'URL': 'https://...'} or a plain URL string
+    if isinstance(_content, dict):
+        _content_url = _content.get('URL') or _content.get('url') or ''
+    elif isinstance(_content, str) and _content.startswith('http'):
+        _content_url = _content
+    else:
+        _content_url = ''
     file_url = (
         msg_obj.get('mediaUrl') or msg_obj.get('fileURL') or
-        msg_obj.get('url') or
-        (_content if isinstance(_content, str) and _content.startswith('http') else '') or ''
+        msg_obj.get('url') or _content_url or ''
     )
-    if msg_type in _MEDIA_TYPES and not file_url:
-        logger.debug(
-            'WPP media msg has no direct URL — content=%r convertOptions=%r msg_keys=%s',
-            str(_content)[:200], msg_obj.get('convertOptions'), list(msg_obj.keys()),
-        )
 
     # Timestamp
     raw_ts = (
