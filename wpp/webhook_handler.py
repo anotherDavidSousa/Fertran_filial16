@@ -353,18 +353,20 @@ def handle_message(payload: dict):
     # Reactions are NOT saved as new messages; they update the target message.
     if msg_type == 'reaction':
         emoji = text  # UAZAPI puts the emoji in body/text
-        # Find the target message ID from multiple possible fields
-        target_id = (
-            msg_obj.get('reactionMessage', {}) if isinstance(msg_obj.get('reactionMessage'), dict) else {}
-        )
-        target_msg_id = (
-            target_id.get('key', {}).get('id') if isinstance(target_id.get('key'), dict) else ''
-        ) or (
-            msg_obj.get('reactionMessageId') or msg_obj.get('reacted_message_id') or
-            msg_obj.get('reactedMsgId') or msg_obj.get('contextInfo', {}).get('stanzaId', '') or ''
-        )
-        logger.info('WPP reaction emoji=%r target_msg_id=%r sender=%r (full keys: %s)',
-                    emoji, target_msg_id, sender_jid, list(msg_obj.keys()))
+        # UAZAPI sends reactions in msg_obj['reaction'] = {'key': {'id': '...'}, 'text': '🙏'}
+        _react = msg_obj.get('reaction') or {}
+        if isinstance(_react, dict):
+            _key = _react.get('key') or {}
+            target_msg_id = (
+                (_key.get('id') if isinstance(_key, dict) else '') or
+                _react.get('id') or _react.get('msgId') or ''
+            )
+            # prefer emoji from reaction.text if body was empty
+            emoji = _react.get('text') or emoji
+        else:
+            target_msg_id = ''
+        logger.info('WPP reaction emoji=%r target_msg_id=%r sender=%r',
+                    emoji, target_msg_id, sender_jid)
         if target_msg_id and emoji:
             from django.db import transaction
             with transaction.atomic():
@@ -393,40 +395,41 @@ def handle_message(payload: dict):
     tipo = _TYPE_MAP.get(msg_type, Mensagem.TYPE_OTHER)
 
     # ── Quoted/reply context ─────────────────────────────────────────────────
-    # UAZAPI may provide quoted message info in several shapes:
-    #   msg_obj['contextInfo']['quotedMessage'] + ['stanzaId']
-    #   msg_obj['quotedMsg'] dict
-    #   msg_obj['quotedMessage'] dict
+    # UAZAPI sends reply context in msg_obj['quoted'] (observed from payload keys).
+    # May also appear as 'contextInfo', 'quotedMsg', 'quotedMessage'.
     quoted_msg_id = ''
     quoted_sender = ''
     quoted_texto  = ''
     quoted_tipo   = ''
 
-    ctx = msg_obj.get('contextInfo') or {}
-    if isinstance(ctx, dict):
-        quoted_msg_id = ctx.get('stanzaId') or ctx.get('quotedMsgId') or ''
-        qsender = ctx.get('participant') or ctx.get('sender') or ''
-        quoted_sender = qsender.split('@')[0] if qsender else ''
-        q_inner = ctx.get('quotedMessage') or {}
-        if isinstance(q_inner, dict):
-            # quotedMessage is typically {conversationType: {text/caption:...}}
-            for _v in q_inner.values():
-                if isinstance(_v, dict):
-                    quoted_texto = (_v.get('text') or _v.get('caption') or
-                                    _v.get('body') or '')[:300]
-                    break
-        quoted_tipo = list(q_inner.keys())[0] if q_inner else ''
+    # Primary: msg_obj['quoted'] — UAZAPI's own field (seen in payload keys log)
+    qm = msg_obj.get('quoted') or {}
+    if isinstance(qm, dict) and qm:
+        logger.debug('WPP quoted field: %s', str(qm)[:300])
+        quoted_msg_id  = (qm.get('id') or qm.get('msgId') or qm.get('messageId') or
+                          qm.get('messageid') or '')
+        quoted_sender  = (qm.get('notifyName') or qm.get('pushName') or
+                          qm.get('senderName') or
+                          (qm.get('sender', '') or '').split('@')[0] or '')
+        quoted_texto   = (qm.get('body') or qm.get('text') or
+                          qm.get('caption') or '')[:300]
+        quoted_tipo    = (qm.get('type') or qm.get('messageType') or '')
 
-    # Fallback: 'quotedMsg' / 'quotedMessage' flat dict
+    # Fallback: contextInfo (WhatsApp Business API shape)
     if not quoted_msg_id:
-        qm = msg_obj.get('quotedMsg') or msg_obj.get('quotedMessage') or {}
-        if isinstance(qm, dict):
-            quoted_msg_id  = qm.get('id') or qm.get('msgId') or qm.get('messageId') or ''
-            quoted_sender  = (qm.get('notifyName') or qm.get('pushName') or
-                              (qm.get('sender', '') or '').split('@')[0] or '')
-            quoted_texto   = (qm.get('body') or qm.get('text') or
-                              qm.get('caption') or '')[:300]
-            quoted_tipo    = qm.get('type') or ''
+        ctx = msg_obj.get('contextInfo') or {}
+        if isinstance(ctx, dict):
+            quoted_msg_id = ctx.get('stanzaId') or ctx.get('quotedMsgId') or ''
+            qsender = ctx.get('participant') or ctx.get('sender') or ''
+            quoted_sender = qsender.split('@')[0] if qsender else ''
+            q_inner = ctx.get('quotedMessage') or {}
+            if isinstance(q_inner, dict):
+                for _v in q_inner.values():
+                    if isinstance(_v, dict):
+                        quoted_texto = (_v.get('text') or _v.get('caption') or
+                                        _v.get('body') or '')[:300]
+                        break
+            quoted_tipo = list(q_inner.keys())[0] if q_inner else ''
 
     grupo   = None
     contato = None
