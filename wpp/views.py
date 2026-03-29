@@ -374,8 +374,15 @@ def webhook(request):
     except Exception:
         return HttpResponse(status=400)
 
-    event = payload.get('event', '')
-    if event == 'message':
+    event = (payload.get('event') or payload.get('type') or '').lower()
+
+    # Log every webhook for debugging (first 500 chars to avoid log spam)
+    logger.info('WPP webhook event=%r keys=%s body_preview=%s',
+                event, list(payload.keys()), str(payload)[:500])
+
+    # UAZAPI sends: "message", "messages", "messages.upsert", "message.upsert"
+    _MSG_EVENTS = {'message', 'messages', 'messages.upsert', 'message.upsert'}
+    if event in _MSG_EVENTS or 'message' in event:
         from .webhook_handler import handle_message
         try:
             handle_message(payload)

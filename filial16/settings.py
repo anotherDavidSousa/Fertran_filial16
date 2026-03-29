@@ -160,6 +160,23 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'wpp': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
 # UAZAPI (WhatsApp API)
 UAZAPI_BASE_URL = os.environ.get('UAZAPI_BASE_URL', '')
 UAZAPI_WEBHOOK_SECRET = os.environ.get('UAZAPI_WEBHOOK_SECRET', '')

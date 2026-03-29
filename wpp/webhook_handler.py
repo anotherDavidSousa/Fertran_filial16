@@ -75,26 +75,87 @@ def _minio_key(is_group: bool, jid: str, ts: datetime, msg_id: str, filename: st
     return f'wpp/{folder}/{jid}/{date_str}/{time_str}_{msg_id}_{safe_name}'
 
 
+def _extract_data(payload: dict) -> dict:
+    """
+    Normalise the payload across UAZAPI formats.
+
+    Known shapes:
+      Shape A (standard):  { event, instance, data: { messageid, chatid, ... } }
+      Shape B (flat):      { event, messageid, chatid, ... }           (data == payload)
+      Shape C (nested):    { event, data: { key: { messageid, ... } } }
+    """
+    data = payload.get('data') or {}
+
+    # Shape A — data is a plain dict with messageid
+    if isinstance(data, dict) and (data.get('messageid') or data.get('id') or data.get('chatid')):
+        logger.debug('WPP payload shape A')
+        return data
+
+    # Shape C — data is a nested dict; look one level deeper
+    if isinstance(data, dict):
+        for v in data.values():
+            if isinstance(v, dict) and (v.get('messageid') or v.get('id') or v.get('chatid')):
+                logger.debug('WPP payload shape C')
+                return v
+
+    # Shape B — payload itself is the message
+    if payload.get('messageid') or payload.get('chatid'):
+        logger.debug('WPP payload shape B (flat)')
+        return payload
+
+    # Last resort: return whatever data is
+    logger.debug('WPP payload unrecognised shape, keys=%s', list(payload.keys()))
+    return data if isinstance(data, dict) else {}
+
+
 def handle_message(payload: dict):
     """Persist a received UAZAPI message event to the database."""
-    data = payload.get('data', {})
+    data = _extract_data(payload)
 
-    msg_id = data.get('messageid') or data.get('id') or ''
-    chat_jid = data.get('chatid') or data.get('remoteJid') or ''
-    sender_jid = data.get('sender') or ''
-    sender_name = data.get('senderName') or ''
-    is_group = bool(data.get('isGroup'))
-    from_me = bool(data.get('fromMe'))
-    msg_type = data.get('messageType') or 'conversation'
-    text = data.get('text') or ''
-    file_url = data.get('fileURL') or ''
-    raw_ts = data.get('messageTimestamp') or 0
+    msg_id = (
+        data.get('messageid') or data.get('id') or
+        data.get('messageId') or data.get('msgId') or ''
+    )
+    chat_jid = (
+        data.get('chatid') or data.get('remoteJid') or
+        data.get('chatId') or data.get('from') or ''
+    )
+    sender_jid = (
+        data.get('sender') or data.get('senderJid') or
+        data.get('author') or ''
+    )
+    sender_name = (
+        data.get('senderName') or data.get('pushName') or
+        data.get('notifyName') or ''
+    )
+    is_group = bool(
+        data.get('isGroup') or data.get('isGroupMsg') or
+        (chat_jid.endswith('@g.us') if chat_jid else False)
+    )
+    from_me = bool(data.get('fromMe') or data.get('self'))
+    msg_type = (
+        data.get('messageType') or data.get('type') or
+        data.get('msgType') or 'conversation'
+    )
+    text = (
+        data.get('text') or data.get('body') or
+        data.get('caption') or data.get('message') or ''
+    )
+    file_url = data.get('fileURL') or data.get('mediaUrl') or data.get('url') or ''
+    raw_ts = data.get('messageTimestamp') or data.get('timestamp') or data.get('t') or 0
+
+    logger.info(
+        'WPP handle_message: msg_id=%r chat_jid=%r sender=%r is_group=%s from_me=%s type=%s text_preview=%r',
+        msg_id, chat_jid, sender_jid, is_group, from_me, msg_type, str(text)[:80],
+    )
 
     if not msg_id or not chat_jid:
+        logger.warning('WPP message missing msg_id or chat_jid — skipping. data keys: %s', list(data.keys()))
         return
 
     if Mensagem.objects.filter(msg_id=msg_id).exists():
-        return  # already persisted (duplicate delivery)
+        logger.debug('WPP duplicate msg_id=%s — skipping', msg_id)
+        return
 
     try:
         ts = datetime.fromtimestamp(int(raw_ts), tz=dt_tz.utc) if raw_ts else timezone.now()
@@ -108,6 +169,8 @@ def handle_message(payload: dict):
 
     if is_group:
         grupo = GrupoConfig.objects.filter(jid=chat_jid).first()
+        if not grupo:
+            logger.info('WPP received msg for unknown group %s — storing without grupo link', chat_jid)
     else:
         contato, _ = Contato.objects.get_or_create(
             jid=sender_jid or chat_jid,
@@ -117,7 +180,7 @@ def handle_message(payload: dict):
             },
         )
 
-    # Resolve the instance to get the token for media download
+    # Resolve instance for media download token
     instance = None
     if grupo:
         instance = grupo.instance
@@ -134,6 +197,7 @@ def handle_message(payload: dict):
             ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
             if _upload_to_minio(content, key, ct):
                 media_minio_key = key
+                logger.info('WPP media saved to MinIO: %s', key)
 
     Mensagem.objects.create(
         msg_id=msg_id,
@@ -148,3 +212,4 @@ def handle_message(payload: dict):
         media_minio_key=media_minio_key,
         timestamp=ts,
     )
+    logger.info('WPP message saved: msg_id=%s chat=%s', msg_id, chat_jid)
