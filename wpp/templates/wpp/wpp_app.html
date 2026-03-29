@@ -71,13 +71,20 @@
                  data-nome="{{ conv.nome|escapejs }}"
                  data-tipo="{{ conv.tipo }}"
                  tabindex="0">
-                <div class="wpp-avatar{% if conv.tipo == 'contato' %} wpp-avatar-contato{% endif %}" style="background:{{ conv.nome|avatar_color }}">
-                    {% if conv.tipo == 'contato' %}
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                    {% else %}
-                    {{ conv.nome|first|upper }}
-                    {% endif %}
+                {% if conv.foto_url %}
+                <div class="wpp-avatar" data-jid-avatar="{{ conv.jid|escapejs }}">
+                    <img src="{{ conv.foto_url }}" alt="{{ conv.nome|first|upper }}"
+                         onerror="this.parentElement.dataset.imgFailed='1';this.remove();this.parentElement.insertAdjacentText('beforeend','{{ conv.nome|first|upper }}')">
                 </div>
+                {% elif conv.tipo == 'contato' %}
+                <div class="wpp-avatar wpp-avatar-contato" data-jid-avatar="{{ conv.jid|escapejs }}">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                </div>
+                {% else %}
+                <div class="wpp-avatar" style="background:{{ conv.nome|avatar_color }}" data-jid-avatar="{{ conv.jid|escapejs }}">
+                    {{ conv.nome|first|upper }}
+                </div>
+                {% endif %}
                 <div class="wpp-group-info">
                     <div class="wpp-group-row1">
                         <span class="wpp-group-name">{{ conv.nome|truncatechars:30 }}</span>
@@ -381,11 +388,16 @@ const WPP = (() => {
                         item.dataset.tipo = g.tipo || 'grupo';
                         item.setAttribute('role', 'listitem');
                         item.setAttribute('tabindex', '0');
-                        const avatarClass = g.tipo === 'contato' ? 'wpp-avatar wpp-avatar-contato' : 'wpp-avatar';
-                        const avatarInner = g.tipo === 'contato'
-                            ? '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>'
-                            : (g.nome || g.jid).charAt(0).toUpperCase();
-                        item.innerHTML = `<div class="${avatarClass}">${avatarInner}</div>
+                        const letter = (g.nome || g.jid).charAt(0).toUpperCase();
+                        let avatarHtml;
+                        if (g.foto_url) {
+                            avatarHtml = `<div class="wpp-avatar" data-jid-avatar="${esc(g.jid)}"><img src="${esc(g.foto_url)}" alt="${letter}" onerror="this.remove();this.parentElement.textContent='${letter}'"></div>`;
+                        } else if (g.tipo === 'contato') {
+                            avatarHtml = `<div class="wpp-avatar wpp-avatar-contato" data-jid-avatar="${esc(g.jid)}"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>`;
+                        } else {
+                            avatarHtml = `<div class="wpp-avatar" data-jid-avatar="${esc(g.jid)}">${letter}</div>`;
+                        }
+                        item.innerHTML = `${avatarHtml}
                             <div class="wpp-group-info">
                                 <div class="wpp-group-row1">
                                     <span class="wpp-group-name">${esc((g.nome || g.jid).substring(0, 30))}</span>
@@ -720,6 +732,42 @@ const WPP = (() => {
         if (e.state?.jid) loadChat(e.state.jid);
     });
 
+    // ── Lazy profile picture fetch ────────────────────────────────────────────
+    // For avatars without a photo, silently request it from UAZAPI and update
+    // the sidebar element when/if it arrives.
+
+    const _fetchedPhotos = new Set();
+
+    function fetchMissingPhotos() {
+        document.querySelectorAll('[data-jid-avatar]').forEach(el => {
+            if (el.querySelector('img') || el.dataset.imgFailed) return; // already has photo or failed
+            const jid = el.dataset.jidAvatar;
+            if (!jid || _fetchedPhotos.has(jid)) return;
+            _fetchedPhotos.add(jid);
+            fetch(`/wpp/api/chat/${encodeURIComponent(jid)}/foto/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF},
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.foto_url) return;
+                // Update all avatars for this JID
+                document.querySelectorAll(`[data-jid-avatar="${CSS.escape(jid)}"]`).forEach(av => {
+                    if (av.querySelector('img') || av.dataset.imgFailed) return;
+                    const letter = av.textContent.trim().charAt(0) || '?';
+                    av.innerHTML = '';
+                    av.style.background = '';
+                    const img = document.createElement('img');
+                    img.src = data.foto_url;
+                    img.alt = letter;
+                    img.onerror = () => { img.remove(); av.textContent = letter; av.dataset.imgFailed = '1'; };
+                    av.appendChild(img);
+                });
+            })
+            .catch(() => { _fetchedPhotos.delete(jid); }); // allow retry later
+        });
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────────
 
     function init() {
@@ -731,6 +779,8 @@ const WPP = (() => {
             history.replaceState({jid: activeJid}, '');
         }
         startGroupPolling();
+        // Fetch missing photos shortly after page loads, then periodically
+        setTimeout(fetchMissingPhotos, 2000);
     }
 
     document.addEventListener('DOMContentLoaded', init);

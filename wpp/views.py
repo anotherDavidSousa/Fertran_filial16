@@ -66,6 +66,7 @@ def _conversas_list():
             'last_msg_tipo': g.last_msg_tipo,
             'placa_cavalo': g.placa_cavalo,
             'pendencias_abertas_count': g.pendencias_abertas_count,
+            'foto_url': g.foto_url,
         })
     for c in _contatos_qs():
         conversas.append({
@@ -77,6 +78,7 @@ def _conversas_list():
             'last_msg_tipo': c.last_msg_tipo,
             'placa_cavalo': '',
             'pendencias_abertas_count': 0,
+            'foto_url': c.foto_url,
         })
     conversas.sort(key=lambda x: x['last_msg_time'] or _epoch, reverse=True)
     return conversas
@@ -231,6 +233,7 @@ def grupos_json(request):
             'preview': preview,
             'last_time': c['last_msg_time'].isoformat() if c['last_msg_time'] else None,
             'pend_count': c['pendencias_abertas_count'],
+            'foto_url': c['foto_url'],
         })
     return JsonResponse({'grupos': result})
 
@@ -403,6 +406,28 @@ def sync_grupos(request):
         count += 1
 
     return JsonResponse({'ok': True, 'grupos_sincronizados': count})
+
+
+@login_required
+@require_menu_perm('wpp')
+@require_POST
+def sync_foto(request, jid):
+    """Fetch profile picture for a JID from UAZAPI and persist it."""
+    instance = WppInstance.objects.filter(ativo=True).first()
+    if not instance:
+        return JsonResponse({'erro': 'Nenhuma instância ativa'}, status=503)
+
+    from .adapter import UazapiAdapter
+    ok, url = UazapiAdapter(instance).get_picture(jid)
+    if not ok or not url:
+        return JsonResponse({'foto_url': ''})
+
+    if jid.endswith('@g.us'):
+        GrupoConfig.objects.filter(jid=jid).update(foto_url=url)
+    else:
+        Contato.objects.filter(jid=jid).update(foto_url=url)
+
+    return JsonResponse({'foto_url': url})
 
 
 @login_required

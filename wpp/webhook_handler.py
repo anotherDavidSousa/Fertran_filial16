@@ -123,17 +123,58 @@ def _fetch_media(url: str, token: str) -> bytes | None:
         return None
 
 
-def _bg_download_media(msg_id: str, url: str, token: str,
+def _bg_download_media(msg_id: str, url: str, instance_id: int,
                        is_group: bool, chat_jid: str, ts: datetime, msg_type: str) -> None:
-    """Background thread: download media → upload to MinIO → update Mensagem row."""
+    """Background thread: download media → upload to MinIO → update Mensagem row.
+
+    Strategy:
+    1. If a direct `url` is provided, stream it.
+    2. Otherwise call UAZAPI /message/download and decode the base64 body.
+    """
+    import base64 as _b64
     from django.db import close_old_connections
     try:
         close_old_connections()
-        ext = os.path.splitext(url.split('?')[0])[1] or ''
-        filename = f'{msg_type}{ext}'
-        content = _fetch_media(url, token)
+
+        content = None
+        filename = msg_type  # fallback with no extension
+
+        if url:
+            ext = os.path.splitext(url.split('?')[0])[1] or ''
+            filename = f'{msg_type}{ext}'
+            from .models import WppInstance
+            inst = WppInstance.objects.filter(pk=instance_id).first()
+            token = inst.token if inst else ''
+            content = _fetch_media(url, token)
+
         if not content:
-            return
+            # Fall back to UAZAPI download API
+            from .models import WppInstance
+            from .adapter import UazapiAdapter
+            inst = WppInstance.objects.filter(pk=instance_id).first()
+            if inst:
+                ok, resp = UazapiAdapter(inst).download_media(msg_id)
+                if ok and isinstance(resp, dict):
+                    b64 = resp.get('base64') or resp.get('data') or ''
+                    if b64:
+                        try:
+                            content = _b64.b64decode(b64)
+                        except Exception:
+                            content = None
+                        mime = resp.get('mimetype') or resp.get('mimeType') or ''
+                        fn = resp.get('filename') or resp.get('fileName') or resp.get('name') or ''
+                        ext = (os.path.splitext(fn)[1] if fn else '') or \
+                              (mimetypes.guess_extension(mime) or '')
+                        filename = f'{msg_type}{ext}'
+                    elif resp.get('url'):
+                        dl_url = resp['url']
+                        content = _fetch_media(dl_url, inst.token)
+                        ext = os.path.splitext(dl_url.split('?')[0])[1] or ''
+                        filename = f'{msg_type}{ext}'
+                if not content:
+                    logger.warning('WPP media: UAZAPI download returned no content for msg_id=%s', msg_id)
+                    return
+
         key = _minio_key(is_group, chat_jid, ts, msg_id, filename)
         ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
         if _upload_to_minio(content, key, ct):
@@ -338,11 +379,12 @@ def handle_message(payload: dict):
     )
     logger.info('WPP message SAVED: msg_id=%s chat=%s type=%s', msg_id, chat_jid, tipo)
 
-    # Download media asynchronously so the webhook returns immediately
-    if file_url and msg_type in _MEDIA_TYPES and instance:
+    # Download media asynchronously so the webhook returns immediately.
+    # Fire even when file_url is empty — the background thread will use UAZAPI download API.
+    if msg_type in _MEDIA_TYPES and instance:
         t = threading.Thread(
             target=_bg_download_media,
-            args=(msg_id, file_url, instance.token, is_group, chat_jid, ts, msg_type),
+            args=(msg_id, file_url, instance.pk, is_group, chat_jid, ts, msg_type),
             daemon=True,
             name=f'wpp-media-{msg_id[:12]}',
         )

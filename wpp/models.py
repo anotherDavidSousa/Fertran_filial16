@@ -36,6 +36,7 @@ class Contato(models.Model):
                            help_text='Ex.: 5531999999999@s.whatsapp.net')
     nome = models.CharField('Nome', max_length=200, blank=True)
     telefone = models.CharField('Telefone', max_length=30, blank=True)
+    foto_url = models.URLField('Foto URL', max_length=500, blank=True)
     atualizado_em = models.DateTimeField('Atualizado em', auto_now=True)
 
     class Meta:
@@ -60,6 +61,7 @@ class GrupoConfig(models.Model):
         'Placa do cavalo', max_length=10, blank=True, db_index=True,
         help_text='Extraída automaticamente do nome do grupo ou preenchida manualmente.',
     )
+    foto_url = models.URLField('Foto URL', max_length=500, blank=True)
     ativo = models.BooleanField('Ativo', default=True)
     sincronizado_em = models.DateTimeField('Sincronizado em', null=True, blank=True)
 

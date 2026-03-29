@@ -19,6 +19,7 @@ urlpatterns = [
     path('api/pendencias/criar/', views.criar_pendencia, name='criar_pendencia'),
     path('api/pendencias/<int:pk>/resolver/', views.resolver_pendencia, name='resolver_pendencia'),
     path('api/grupos/sync/', views.sync_grupos, name='sync_grupos'),
+    path('api/chat/<str:jid>/foto/', views.sync_foto, name='sync_foto'),
     # Media proxy (authenticated redirect to MinIO)
     path('api/media/<path:key>', views.media_proxy, name='media_proxy'),
     # Webhook (no session auth)

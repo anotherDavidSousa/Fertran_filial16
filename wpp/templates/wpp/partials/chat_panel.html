@@ -8,8 +8,8 @@
 <!-- ── Chat header ──────────────────────────────────────────────────────────── -->
 <div class="wpp-chat-header" data-jid="{{ jid|escapejs }}">
     {% if grupo %}
-    <div class="wpp-avatar wpp-avatar-md" style="background:{{ grupo.nome|avatar_color }}">
-        {{ grupo.nome|first|upper }}
+    <div class="wpp-avatar wpp-avatar-md{% if not grupo.foto_url %}" style="background:{{ grupo.nome|avatar_color }}{% endif %}" data-jid-avatar="{{ jid|escapejs }}">
+        {% if grupo.foto_url %}<img src="{{ grupo.foto_url }}" alt="{{ grupo.nome|first|upper }}" onerror="this.remove();this.parentElement.textContent='{{ grupo.nome|first|upper }}'">{% else %}{{ grupo.nome|first|upper }}{% endif %}
     </div>
     <div class="wpp-chat-info">
         <div class="wpp-chat-name">{{ grupo.nome|default:jid|truncatechars:45 }}</div>
@@ -26,8 +26,8 @@
         </div>
     </div>
     {% elif contato %}
-    <div class="wpp-avatar wpp-avatar-md wpp-avatar-contato" style="background:{{ contato.nome|avatar_color }}">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+    <div class="wpp-avatar wpp-avatar-md{% if not contato.foto_url %} wpp-avatar-contato{% endif %}" data-jid-avatar="{{ jid|escapejs }}">
+        {% if contato.foto_url %}<img src="{{ contato.foto_url }}" alt="{{ contato.nome|first|upper }}" onerror="this.remove();this.parentElement.classList.add('wpp-avatar-contato')">{% else %}<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>{% endif %}
     </div>
     <div class="wpp-chat-info">
         <div class="wpp-chat-name">{{ contato.nome|default:jid|truncatechars:45 }}</div>

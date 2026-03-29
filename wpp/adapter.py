@@ -50,8 +50,24 @@ class UazapiAdapter:
         return self._post('/send/text', {'number': number, 'text': text})
 
     def download_media(self, message_id):
-        """Download media by message ID. Returns (ok, response_dict | error_str)."""
+        """Download media by message ID. Returns (ok, response_dict | error_str).
+        UAZAPI response typically contains {base64, mimetype, filename} or {url}.
+        """
         return self._post('/message/download', {'id': message_id})
+
+    def get_picture(self, jid):
+        """Fetch profile/group picture URL for a JID. Returns (ok, url_str | error_str)."""
+        # Try group endpoint first, then contact endpoint
+        if jid.endswith('@g.us'):
+            ok, resp = self._get('/group/picture', {'id': jid})
+        else:
+            ok, resp = self._get('/contact/picture', {'number': jid})
+        if not ok:
+            return False, resp
+        if isinstance(resp, dict):
+            url = resp.get('url') or resp.get('eurl') or resp.get('profilePicture') or ''
+            return bool(url), url
+        return False, ''
 
     def list_groups(self):
         """List all groups. Returns (ok, list | error_str)."""
