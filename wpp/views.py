@@ -251,7 +251,7 @@ def mensagens_json(request, jid):
             pass
     msgs = list(
         qs.order_by('timestamp').values(
-            'id', 'sender_nome', 'from_me', 'tipo', 'texto',
+            'id', 'sender_jid', 'sender_nome', 'from_me', 'tipo', 'texto',
             'media_minio_key', 'timestamp', 'enviado_por__username',
         )
     )
@@ -419,6 +419,7 @@ def sync_foto(request, jid):
 
     from .adapter import UazapiAdapter
     ok, url = UazapiAdapter(instance).get_picture(jid)
+    logger.info('WPP sync_foto jid=%r ok=%s url=%r', jid, ok, url)
     if not ok or not url:
         return JsonResponse({'foto_url': ''})
 

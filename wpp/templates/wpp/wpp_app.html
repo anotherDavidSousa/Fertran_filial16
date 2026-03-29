@@ -176,6 +176,14 @@ const WPP = (() => {
         return d.innerHTML;
     }
 
+    // Deterministic color matching Python avatar_color templatetag
+    const _AV_COLORS = ['#1a6b5e','#2d6a9f','#6d3b8e','#8e3b3b','#3b6d4b','#8e5c2d','#2d4f8e','#6d1a6b','#1a5c6d','#5c6d1a'];
+    function strColor(s) {
+        let h = 0;
+        for (let i = 0; i < (s||'').length; i++) h += (s||'').charCodeAt(i);
+        return _AV_COLORS[h % _AV_COLORS.length];
+    }
+
     function wppFmt(text) {
         if (!text) return '';
         let t = esc(text);
@@ -292,19 +300,15 @@ const WPP = (() => {
         div.className = 'wpp-msg ' + (m.from_me ? 'wpp-out' : 'wpp-in');
         div.dataset.id = m.id;
 
-        let inner = '';
-        if (!m.from_me && m.sender_nome) {
-            inner += `<span class="wpp-sender-name">${esc(m.sender_nome)}</span>`;
-        }
-
-        let body = '';
         const mediaUrl = m.media_minio_key ? `/wpp/api/media/${m.media_minio_key}` : '';
 
+        let body = '';
         if (m.tipo === 'text') {
             body = `<span class="wpp-msg-text">${wppFmt(m.texto)}</span>`;
         } else if (m.tipo === 'image' && mediaUrl) {
-            body = `<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-img" onclick="WPP.lightbox(this.src)">
-                    ${m.texto ? `<span class="wpp-img-caption">${esc(m.texto)}</span>` : ''}</div>`;
+            body = `<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-img" onclick="WPP.lightbox(this.src)">${m.texto ? `<span class="wpp-img-caption">${esc(m.texto)}</span>` : ''}</div>`;
+        } else if (m.tipo === 'sticker' && mediaUrl) {
+            body = `<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-sticker" onclick="WPP.lightbox(this.src)"></div>`;
         } else if (m.tipo === 'audio' && mediaUrl) {
             body = `<div class="wpp-audio" data-src="${mediaUrl}">
                 <button class="wpp-audio-btn" type="button">
@@ -319,19 +323,32 @@ const WPP = (() => {
             body = `<video class="wpp-video" controls preload="none" src="${mediaUrl}"></video>`;
         } else if (m.tipo === 'document' && mediaUrl) {
             const fname = mediaUrl.split('/').pop().split('?')[0];
-            body = `<a class="wpp-doc" href="${mediaUrl}" target="_blank" rel="noopener">
+            body = `<a class="wpp-doc" href="${mediaUrl}" target="_blank" rel="noopener" download>
                 <span class="wpp-doc-icon">📄</span>
                 <span class="wpp-doc-info"><span class="wpp-doc-name">${esc(fname)}</span><span class="wpp-doc-type">Documento</span></span>
                 <span class="wpp-doc-dl">⬇</span></a>`;
         } else {
-            body = `<span class="wpp-msg-text wpp-media-na">${esc(m.texto || '[mídia]')}</span>`;
+            const label = m.tipo === 'image' ? '📷 Foto' : m.tipo === 'audio' ? '🎤 Áudio'
+                : m.tipo === 'video' ? '📹 Vídeo' : m.tipo === 'document' ? '📄 Documento'
+                : m.tipo === 'sticker' ? '🪄 Sticker' : '📎 Mídia';
+            body = `<span class="wpp-msg-text wpp-media-na">${label} (não disponível)</span>`;
         }
 
         const tick = m.from_me ? '<span class="wpp-ticks">✓✓</span>' : '';
-        inner += `<div class="wpp-bubble">${body}
-            <div class="wpp-msg-meta"><span class="wpp-msg-time">${fmtTime(m.timestamp)}</span>${tick}</div>
-        </div>`;
-        div.innerHTML = inner;
+        const bubble = `<div class="wpp-bubble">${body}<div class="wpp-msg-meta"><span class="wpp-msg-time">${fmtTime(m.timestamp)}</span>${tick}</div></div>`;
+
+        if (!m.from_me) {
+            const color = strColor(m.sender_nome || '');
+            const initial = (m.sender_nome || '?').charAt(0).toUpperCase();
+            const senderJid = m.sender_jid || '';
+            div.innerHTML = `<div class="wpp-sender-av" style="background:${color}" data-sender-jid="${esc(senderJid)}" title="${esc(m.sender_nome||'')}">${initial}</div>
+                <div class="wpp-msg-col">
+                    ${m.sender_nome ? `<span class="wpp-sender-name" style="color:${color}">${esc(m.sender_nome)}</span>` : ''}
+                    ${bubble}
+                </div>`;
+        } else {
+            div.innerHTML = bubble;
+        }
         return div;
     }
 
@@ -375,6 +392,10 @@ const WPP = (() => {
             .then(data => {
                 if (!data.grupos) return;
                 const list = document.getElementById('wpp-group-list');
+                // Build order map for re-sorting after updates
+                const orderMap = {};
+                data.grupos.forEach((g, i) => { orderMap[g.jid] = i; });
+
                 data.grupos.forEach(g => {
                     let item = document.querySelector(`.wpp-group-item[data-jid="${CSS.escape(g.jid)}"]`);
                     if (!item) {
@@ -428,6 +449,15 @@ const WPP = (() => {
                         } else if (pb) pb.remove();
                     }
                 });
+
+                // Re-sort sidebar items by API order (most recent first)
+                const items = Array.from(list.querySelectorAll('.wpp-group-item'));
+                items.sort((a, b) => {
+                    const ai = orderMap[a.dataset.jid] ?? 9999;
+                    const bi = orderMap[b.dataset.jid] ?? 9999;
+                    return ai - bi;
+                });
+                items.forEach(item => list.appendChild(item));
             })
             .catch(() => {});
     }

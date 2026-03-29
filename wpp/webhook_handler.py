@@ -153,13 +153,19 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
             from .adapter import UazapiAdapter
             inst = WppInstance.objects.filter(pk=instance_id).first()
             if inst:
+                logger.info('WPP media: calling UAZAPI download API for msg_id=%s', msg_id)
                 ok, resp = UazapiAdapter(inst).download_media(msg_id)
+                logger.info('WPP media: UAZAPI download response ok=%s resp_keys=%s resp_preview=%r',
+                            ok, list(resp.keys()) if isinstance(resp, dict) else type(resp).__name__,
+                            str(resp)[:300])
                 if ok and isinstance(resp, dict):
                     b64 = resp.get('base64') or resp.get('data') or ''
                     if b64:
                         try:
                             content = _b64.b64decode(b64)
-                        except Exception:
+                            logger.info('WPP media: decoded %d bytes from base64 for msg_id=%s', len(content), msg_id)
+                        except Exception as exc:
+                            logger.error('WPP media: base64 decode failed for msg_id=%s: %s', msg_id, exc)
                             content = None
                         mime = resp.get('mimetype') or resp.get('mimeType') or ''
                         fn = resp.get('filename') or resp.get('fileName') or resp.get('name') or ''
@@ -168,6 +174,7 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
                         filename = f'{msg_type}{ext}'
                     elif resp.get('url'):
                         dl_url = resp['url']
+                        logger.info('WPP media: downloading from url=%r for msg_id=%s', dl_url, msg_id)
                         content = _fetch_media(dl_url, inst.token)
                         ext = os.path.splitext(dl_url.split('?')[0])[1] or ''
                         filename = f'{msg_type}{ext}'
