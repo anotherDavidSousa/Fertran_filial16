@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'fila',
     'core',
     'regras_api',
-    'wpp',
 ]
 
 MIDDLEWARE = [
@@ -68,7 +67,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'fila.context_processors.total_fila',
                 'fila.context_processors.menu_permissions',
-                'wpp.context_processors.wpp_pendencias',
+
             ],
         },
     },
@@ -169,11 +168,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'wpp': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
+
         # Log all 500-level errors with full tracebacks so they appear in docker logs
         'django.request': {
             'handlers': ['console'],

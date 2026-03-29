@@ -64,20 +64,7 @@
                 </div>
             </div>
             {% endif %}
-            {% if can_see_wpp %}
-            <div class="nav-group nav-group-wpp" id="nav-group-wpp">
-                <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-wpp-sub" id="nav-group-wpp-btn">
-                    <span class="nav-group-title">WhatsApp</span>
-                    {% if wpp_pendencias_abertas %}<span class="nav-badge nav-badge-alert">{{ wpp_pendencias_abertas }}</span>{% endif %}
-                    <span class="nav-group-chevron" aria-hidden="true">▼</span>
-                </button>
-                <div class="nav-group-sub" id="nav-group-wpp-sub" role="region" aria-labelledby="nav-group-wpp-btn">
-                    <a href="{% url 'wpp:inbox' %}" class="nav-item nav-sub">Grupos</a>
-                    <a href="{% url 'wpp:pendencias' %}" class="nav-item nav-sub">Pendências {% if wpp_pendencias_abertas %}<span class="nav-badge nav-badge-alert">{{ wpp_pendencias_abertas }}</span>{% endif %}</a>
-                    <a href="{% url 'wpp:config' %}" class="nav-item nav-sub">Configurações</a>
-                </div>
-            </div>
-            {% endif %}
+
             {% if can_see_processador or can_see_agregamento %}
             <div class="nav-group nav-group-ferramentas" id="nav-group-ferramentas">
                 <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-ferramentas-sub" id="nav-group-ferramentas-btn">

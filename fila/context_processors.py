@@ -18,6 +18,5 @@ def menu_permissions(request):
             'can_see_processador': False,
             'can_see_cavalos': False,
             'can_see_agregamento': False,
-            'can_see_wpp': False,
         }
     return user_menu_permissions(request.user)
