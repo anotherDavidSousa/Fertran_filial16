@@ -44,9 +44,12 @@ from .models import Contato, GrupoConfig, Mensagem, WppInstance
 logger = logging.getLogger(__name__)
 
 _MEDIA_TYPES = {
-    # raw UAZAPI type values
+    # raw UAZAPI type values (lowercased)
     'image', 'video', 'document', 'audio', 'ptt', 'sticker', 'gif',
-    # resolved *Message names
+    # after _MEDIATYPE_MAP reassignment (camelCase, capital M)
+    'imageMessage', 'videoMessage', 'documentMessage', 'audioMessage',
+    'stickerMessage', 'gifMessage',
+    # fully-lowercased variants (from direct UAZAPI type field)
     'imagemessage', 'videomessage', 'documentmessage', 'audiomessage', 'stickermessage',
 }
 

@@ -33,7 +33,7 @@ class UazapiAdapter:
             logger.error('UAZAPI POST %s failed: %s', path, exc)
             return False, str(exc)
 
-    def _get(self, path, params=None):
+    def _get(self, path, params=None, silent=False):
         try:
             r = requests.get(
                 f'{self.base_url}{path}', params=params,
@@ -42,7 +42,8 @@ class UazapiAdapter:
             r.raise_for_status()
             return True, r.json()
         except requests.RequestException as exc:
-            logger.error('UAZAPI GET %s failed: %s', path, exc)
+            if not silent:
+                logger.error('UAZAPI GET %s failed: %s', path, exc)
             return False, str(exc)
 
     def send_text(self, number, text):
@@ -56,17 +57,44 @@ class UazapiAdapter:
         return self._post('/message/download', {'id': message_id})
 
     def get_picture(self, jid):
-        """Fetch profile/group picture URL for a JID. Returns (ok, url_str | error_str)."""
-        # Try group endpoint first, then contact endpoint
+        """Fetch profile/group picture URL for a JID. Returns (ok, url_str | error_str).
+
+        Tries multiple UAZAPI endpoint variants until one works.
+        """
+        candidates = []
         if jid.endswith('@g.us'):
-            ok, resp = self._get('/group/picture', {'id': jid})
+            candidates = [
+                ('GET', '/group/photo', {'id': jid}),
+                ('GET', '/group/picture', {'id': jid}),
+                ('POST', '/group/photo', {'groupId': jid}),
+            ]
         else:
-            ok, resp = self._get('/contact/picture', {'number': jid})
-        if not ok:
-            return False, resp
-        if isinstance(resp, dict):
-            url = resp.get('url') or resp.get('eurl') or resp.get('profilePicture') or ''
-            return bool(url), url
+            phone = jid.split('@')[0]
+            candidates = [
+                ('GET', '/contact/photo', {'number': phone}),
+                ('GET', '/contact/photo', {'number': jid}),
+                ('GET', '/contact/picture', {'number': phone}),
+                ('POST', '/contact/photo', {'number': phone}),
+            ]
+
+        for method, path, params in candidates:
+            try:
+                if method == 'GET':
+                    ok, resp = self._get(path, params, silent=True)
+                else:
+                    ok, resp = self._post(path, params)
+                if ok and isinstance(resp, dict):
+                    url = (resp.get('url') or resp.get('eurl') or
+                           resp.get('profilePicture') or resp.get('photo') or
+                           resp.get('imgUrl') or '')
+                    if url:
+                        logger.info('UAZAPI get_picture %s %s → url=%r', method, path, url[:80])
+                        return True, url
+                elif ok and isinstance(resp, str) and resp.startswith('http'):
+                    logger.info('UAZAPI get_picture %s %s → str url', method, path)
+                    return True, resp
+            except Exception:
+                pass
         return False, ''
 
     def list_groups(self):
