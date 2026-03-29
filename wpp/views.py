@@ -434,10 +434,34 @@ def sync_foto(request, jid):
 @login_required
 @require_menu_perm('wpp')
 def media_proxy(request, key):
-    """Authenticated redirect to the MinIO/S3 media URL."""
-    from django.core.files.storage import default_storage
-    url = default_storage.url(key)
-    return HttpResponseRedirect(url)
+    """Stream MinIO media through Django so internal Docker hostnames stay hidden."""
+    import mimetypes
+    import boto3
+    from botocore.client import Config
+    from django.conf import settings as dj_settings
+
+    try:
+        s3 = boto3.client(
+            's3',
+            endpoint_url=dj_settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=dj_settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=dj_settings.AWS_SECRET_ACCESS_KEY,
+            config=Config(signature_version='s3v4'),
+        )
+        obj = s3.get_object(Bucket=dj_settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+        body = obj['Body'].read()
+        content_type = obj.get('ContentType') or mimetypes.guess_type(key)[0] or 'application/octet-stream'
+        filename = key.split('/')[-1]
+        # Inline for images/video/audio so browser displays them; attachment otherwise
+        inline_types = ('image/', 'video/', 'audio/')
+        disposition = 'inline' if any(content_type.startswith(t) for t in inline_types) else 'attachment'
+        response = HttpResponse(body, content_type=content_type)
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        response['Content-Length'] = len(body)
+        return response
+    except Exception as exc:
+        logger.error('media_proxy failed for key=%r: %s', key, exc)
+        return HttpResponse(status=404)
 
 
 # ── Webhook (no session auth) ──────────────────────────────────────────────────
