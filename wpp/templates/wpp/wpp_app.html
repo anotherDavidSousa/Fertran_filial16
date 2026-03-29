@@ -83,17 +83,7 @@
                         {% endif %}
                     </div>
                     <div class="wpp-group-row2">
-                        <span class="wpp-group-preview">
-                            {%- if grupo.last_msg_tipo and grupo.last_msg_tipo != 'text' -%}
-                                {%- if grupo.last_msg_tipo == 'image' %}📷 Foto
-                                {%- elif grupo.last_msg_tipo == 'audio' %}🎤 Áudio
-                                {%- elif grupo.last_msg_tipo == 'video' %}📹 Vídeo
-                                {%- elif grupo.last_msg_tipo == 'document' %}📄 Documento
-                                {%- else %}📎 Mídia{%- endif -%}
-                            {%- elif grupo.last_msg_texto -%}
-                                {{ grupo.last_msg_texto|truncatechars:38 }}
-                            {%- endif %}
-                        </span>
+                        <span class="wpp-group-preview">{% if grupo.last_msg_tipo and grupo.last_msg_tipo != 'text' %}{% if grupo.last_msg_tipo == 'image' %}📷 Foto{% elif grupo.last_msg_tipo == 'audio' %}🎤 Áudio{% elif grupo.last_msg_tipo == 'video' %}📹 Vídeo{% elif grupo.last_msg_tipo == 'document' %}📄 Documento{% else %}📎 Mídia{% endif %}{% elif grupo.last_msg_texto %}{{ grupo.last_msg_texto|truncatechars:38 }}{% endif %}</span>
                         <span class="wpp-group-badges">
                             {% if grupo.placa_cavalo %}
                             <span class="wpp-placa-mini">{{ grupo.placa_cavalo }}</span>

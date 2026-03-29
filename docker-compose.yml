@@ -21,6 +21,8 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_USE_SSL: 0
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      UAZAPI_BASE_URL: ${UAZAPI_BASE_URL:-}
+      UAZAPI_WEBHOOK_SECRET: ${UAZAPI_WEBHOOK_SECRET:-}
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
