@@ -171,7 +171,18 @@ LOGGING = {
     'loggers': {
         'wpp': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        # Log all 500-level errors with full tracebacks so they appear in docker logs
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
             'propagate': False,
         },
     },

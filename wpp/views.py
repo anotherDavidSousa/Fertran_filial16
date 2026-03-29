@@ -104,7 +104,10 @@ def _chat_context(jid):
             .select_related('criado_por', 'resolvido_por')
             .order_by('-criado_em')
         )
-        carregamento = grupo.carregamento_ativo()
+        try:
+            carregamento = grupo.carregamento_ativo()
+        except Exception:
+            logger.exception('carregamento_ativo failed for grupo jid=%s', grupo.jid)
 
     return grupo, contato, mensagens, pendencias_grupo, carregamento
 

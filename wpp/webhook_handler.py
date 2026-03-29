@@ -205,6 +205,21 @@ def handle_message(payload: dict):
         msg_obj.get('msgType') or 'chat'
     ).lower()
 
+    # For generic 'media' type, try to determine real type from mimetype/fileName
+    if msg_type == 'media':
+        mimetype = (msg_obj.get('mimetype') or msg_obj.get('mimeType') or '').lower()
+        filename = (msg_obj.get('fileName') or msg_obj.get('filename') or '').lower()
+        if mimetype.startswith('image/') or filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+            msg_type = 'imageMessage'
+        elif mimetype.startswith('video/') or filename.endswith(('.mp4', '.mov', '.avi', '.webm')):
+            msg_type = 'videoMessage'
+        elif mimetype.startswith('audio/') or filename.endswith(('.mp3', '.ogg', '.m4a', '.wav')):
+            msg_type = 'audioMessage'
+        elif mimetype or filename:
+            msg_type = 'documentMessage'
+        else:
+            logger.debug('WPP type=media with unknown subtype — msg_obj keys: %s', list(msg_obj.keys()))
+
     # Text body
     text = (
         msg_obj.get('body') or msg_obj.get('text') or
