@@ -131,9 +131,15 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
                        is_group: bool, chat_jid: str, ts: datetime, msg_type: str) -> None:
     """Background thread: download media → upload to MinIO → update Mensagem row.
 
-    Strategy:
-    1. If a direct `url` is provided, stream it.
-    2. Otherwise call UAZAPI /message/download and decode the base64 body.
+    Strategy (IMPORTANT):
+    WhatsApp CDN URLs (mmg.whatsapp.net, media-*.whatsapp.net) serve
+    end-to-end ENCRYPTED blobs — downloading them directly produces garbage.
+    UAZAPI's /message/download endpoint handles decryption and returns either:
+      - {fileURL, mimetype}  → download from their server (decrypted)
+      - {base64, mimetype}   → decode in-memory
+
+    We ALWAYS call UAZAPI first. The raw CDN `url` is only used as a last
+    resort for non-WhatsApp-CDN URLs that may not be encrypted.
     """
     import base64 as _b64
     from django.db import close_old_connections
@@ -141,57 +147,61 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
         close_old_connections()
 
         content = None
-        filename = msg_type  # fallback with no extension
+        filename = msg_type  # fallback
 
-        if url:
-            from .models import WppInstance
-            inst = WppInstance.objects.filter(pk=instance_id).first()
+        from .models import WppInstance
+        from .adapter import UazapiAdapter
+        inst = WppInstance.objects.filter(pk=instance_id).first()
+
+        # ── Step 1: UAZAPI download API (decrypts WhatsApp media) ──────────────
+        if inst:
+            ok, resp = UazapiAdapter(inst).download_media(msg_id)
+            logger.info('WPP media UAZAPI dl msg_id=%s ok=%s keys=%s preview=%r',
+                        msg_id, ok,
+                        list(resp.keys()) if isinstance(resp, dict) else type(resp).__name__,
+                        str(resp)[:200])
+            if ok and isinstance(resp, dict):
+                b64 = resp.get('base64') or resp.get('data') or ''
+                if b64:
+                    try:
+                        content = _b64.b64decode(b64)
+                    except Exception as exc:
+                        logger.error('WPP media base64 decode failed msg_id=%s: %s', msg_id, exc)
+                    mime = resp.get('mimetype') or resp.get('mimeType') or ''
+                    fn   = resp.get('filename') or resp.get('fileName') or ''
+                    ext  = (os.path.splitext(fn)[1] if fn else '') or \
+                           (mimetypes.guess_extension(mime) or '')
+                    filename = f'{msg_type}{ext}' if ext else msg_type
+
+                elif resp.get('fileURL') or resp.get('url'):
+                    dl_url = resp.get('fileURL') or resp.get('url')
+                    content, resp_mime = _fetch_media(dl_url, inst.token)
+                    mime   = resp.get('mimetype') or resp.get('mimeType') or resp_mime or ''
+                    url_ext = os.path.splitext(dl_url.split('?')[0])[1] if dl_url else ''
+                    # Prefer MIME-derived extension over URL extension when URL
+                    # extension is an encrypted/binary placeholder (.enc, .bin)
+                    _bad_exts = {'.enc', '.bin', '.tmp', ''}
+                    if url_ext and url_ext.lower() not in _bad_exts:
+                        ext = url_ext
+                    else:
+                        ext = (mimetypes.guess_extension(mime) or url_ext or '')
+                    filename = f'{msg_type}{ext}' if ext else msg_type
+
+        # ── Step 2: fallback — direct URL only for non-WhatsApp-CDN sources ───
+        # (mmg.whatsapp.net and media-*.whatsapp.net are encrypted; skip them)
+        if not content and url and 'whatsapp.net' not in url:
             token = inst.token if inst else ''
             content, resp_mime = _fetch_media(url, token)
-            # Determine extension: prefer URL path, fall back to Content-Type header
             url_ext = os.path.splitext(url.split('?')[0])[1]
             ext = url_ext or (mimetypes.guess_extension(resp_mime) or '' if resp_mime else '')
             filename = f'{msg_type}{ext}' if ext else msg_type
 
         if not content:
-            # Fall back to UAZAPI download API
-            from .models import WppInstance
-            from .adapter import UazapiAdapter
-            inst = WppInstance.objects.filter(pk=instance_id).first()
-            if inst:
-                logger.info('WPP media: calling UAZAPI download API for msg_id=%s', msg_id)
-                ok, resp = UazapiAdapter(inst).download_media(msg_id)
-                logger.info('WPP media: UAZAPI download response ok=%s resp_keys=%s resp_preview=%r',
-                            ok, list(resp.keys()) if isinstance(resp, dict) else type(resp).__name__,
-                            str(resp)[:300])
-                if ok and isinstance(resp, dict):
-                    b64 = resp.get('base64') or resp.get('data') or ''
-                    if b64:
-                        try:
-                            content = _b64.b64decode(b64)
-                            logger.info('WPP media: decoded %d bytes from base64 for msg_id=%s', len(content), msg_id)
-                        except Exception as exc:
-                            logger.error('WPP media: base64 decode failed for msg_id=%s: %s', msg_id, exc)
-                            content = None
-                        mime = resp.get('mimetype') or resp.get('mimeType') or ''
-                        fn = resp.get('filename') or resp.get('fileName') or resp.get('name') or ''
-                        ext = (os.path.splitext(fn)[1] if fn else '') or \
-                              (mimetypes.guess_extension(mime) or '')
-                        filename = f'{msg_type}{ext}'
-                    elif resp.get('fileURL') or resp.get('url'):
-                        dl_url = resp.get('fileURL') or resp.get('url')
-                        logger.info('WPP media: downloading from fileURL=%r for msg_id=%s', dl_url, msg_id)
-                        content, resp_mime2 = _fetch_media(dl_url, inst.token)
-                        mime = resp.get('mimetype') or resp.get('mimeType') or resp_mime2 or ''
-                        url_ext2 = os.path.splitext(dl_url.split('?')[0])[1] if dl_url else ''
-                        ext = url_ext2 or (mimetypes.guess_extension(mime) or '')
-                        filename = f'{msg_type}{ext}' if ext else msg_type
-                if not content:
-                    logger.warning('WPP media: UAZAPI download returned no content for msg_id=%s', msg_id)
-                    return
+            logger.warning('WPP media: no content for msg_id=%s', msg_id)
+            return
 
         key = _minio_key(is_group, chat_jid, ts, msg_id, filename)
-        ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        ct  = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
         if _upload_to_minio(content, key, ct):
             Mensagem.objects.filter(msg_id=msg_id).update(media_minio_key=key)
             logger.info('WPP media saved (bg): %s', key)
