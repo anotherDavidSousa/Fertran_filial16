@@ -102,28 +102,29 @@ def _upload_to_minio(content: bytes, key: str, content_type: str = 'application/
 _MAX_MEDIA_BYTES = 80 * 1024 * 1024  # 80 MB cap
 
 
-def _fetch_media(url: str, token: str) -> bytes | None:
-    """Download media with streaming + size cap to avoid OOM on large videos."""
+def _fetch_media(url: str, token: str) -> tuple:
+    """Download media with streaming + size cap. Returns (bytes, mime_type) or (None, '')."""
     try:
-        r = requests.get(url, headers={'token': token}, timeout=60, stream=True)
+        headers = {'token': token} if token else {}
+        r = requests.get(url, headers=headers, timeout=60, stream=True)
         r.raise_for_status()
-        # Respect content-length if present
         cl = int(r.headers.get('content-length', 0))
         if cl and cl > _MAX_MEDIA_BYTES:
             logger.warning('Media too large (%d bytes) — skipping download from %s', cl, url)
-            return None
+            return None, ''
         chunks = []
         downloaded = 0
-        for chunk in r.iter_content(chunk_size=131072):  # 128 KB chunks
+        for chunk in r.iter_content(chunk_size=131072):
             downloaded += len(chunk)
             if downloaded > _MAX_MEDIA_BYTES:
                 logger.warning('Media exceeded 80 MB during download — aborting %s', url)
-                return None
+                return None, ''
             chunks.append(chunk)
-        return b''.join(chunks)
+        mime = r.headers.get('content-type', '').split(';')[0].strip()
+        return b''.join(chunks), mime
     except Exception as exc:
         logger.error('Media download failed from %s: %s', url, exc)
-        return None
+        return None, ''
 
 
 def _bg_download_media(msg_id: str, url: str, instance_id: int,
@@ -143,12 +144,14 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
         filename = msg_type  # fallback with no extension
 
         if url:
-            ext = os.path.splitext(url.split('?')[0])[1] or ''
-            filename = f'{msg_type}{ext}'
             from .models import WppInstance
             inst = WppInstance.objects.filter(pk=instance_id).first()
             token = inst.token if inst else ''
-            content = _fetch_media(url, token)
+            content, resp_mime = _fetch_media(url, token)
+            # Determine extension: prefer URL path, fall back to Content-Type header
+            url_ext = os.path.splitext(url.split('?')[0])[1]
+            ext = url_ext or (mimetypes.guess_extension(resp_mime) or '' if resp_mime else '')
+            filename = f'{msg_type}{ext}' if ext else msg_type
 
         if not content:
             # Fall back to UAZAPI download API
@@ -178,11 +181,11 @@ def _bg_download_media(msg_id: str, url: str, instance_id: int,
                     elif resp.get('fileURL') or resp.get('url'):
                         dl_url = resp.get('fileURL') or resp.get('url')
                         logger.info('WPP media: downloading from fileURL=%r for msg_id=%s', dl_url, msg_id)
-                        content = _fetch_media(dl_url, inst.token)
-                        mime = resp.get('mimetype') or resp.get('mimeType') or ''
-                        ext = (os.path.splitext(dl_url.split('?')[0])[1] if dl_url else '') or \
-                              (mimetypes.guess_extension(mime) or '')
-                        filename = f'{msg_type}{ext}'
+                        content, resp_mime2 = _fetch_media(dl_url, inst.token)
+                        mime = resp.get('mimetype') or resp.get('mimeType') or resp_mime2 or ''
+                        url_ext2 = os.path.splitext(dl_url.split('?')[0])[1] if dl_url else ''
+                        ext = url_ext2 or (mimetypes.guess_extension(mime) or '')
+                        filename = f'{msg_type}{ext}' if ext else msg_type
                 if not content:
                     logger.warning('WPP media: UAZAPI download returned no content for msg_id=%s', msg_id)
                     return
@@ -207,8 +210,10 @@ def _minio_key(is_group: bool, jid: str, ts: datetime, msg_id: str, filename: st
     date_str = ts.strftime('%Y-%m-%d')
     time_str = ts.strftime('%H-%M-%S')
     safe_name = os.path.basename(filename) or 'media'
+    # Sanitize msg_id: remove characters that cause URL/path issues
+    safe_id = msg_id[:16].replace(':', '-').replace('/', '-')
     folder = 'grupos' if is_group else 'contatos'
-    return f'wpp/{folder}/{safe_jid}/{date_str}/{time_str}_{msg_id[:16]}_{safe_name}'
+    return f'wpp/{folder}/{safe_jid}/{date_str}/{time_str}_{safe_id}_{safe_name}'
 
 
 def handle_message(payload: dict):
