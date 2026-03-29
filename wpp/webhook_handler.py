@@ -253,6 +253,11 @@ def handle_message(payload: dict):
         msg_obj.get('url') or
         (_content if isinstance(_content, str) and _content.startswith('http') else '') or ''
     )
+    if msg_type in _MEDIA_TYPES and not file_url:
+        logger.debug(
+            'WPP media msg has no direct URL — content=%r convertOptions=%r msg_keys=%s',
+            str(_content)[:200], msg_obj.get('convertOptions'), list(msg_obj.keys()),
+        )
 
     # Timestamp
     raw_ts = (
