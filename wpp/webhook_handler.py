@@ -43,7 +43,12 @@ from .models import Contato, GrupoConfig, Mensagem, WppInstance
 
 logger = logging.getLogger(__name__)
 
-_MEDIA_TYPES = {'image', 'video', 'document', 'audio', 'ptt', 'sticker'}
+_MEDIA_TYPES = {
+    # raw UAZAPI type values
+    'image', 'video', 'document', 'audio', 'ptt', 'sticker', 'gif',
+    # resolved *Message names
+    'imagemessage', 'videomessage', 'documentmessage', 'audiomessage', 'stickermessage',
+}
 
 _TYPE_MAP = {
     'chat':              Mensagem.TYPE_TEXT,
@@ -205,11 +210,26 @@ def handle_message(payload: dict):
         msg_obj.get('msgType') or 'chat'
     ).lower()
 
-    # For generic 'media' type, try to determine real type from mimetype/fileName
+    # For generic 'media' type, resolve to a specific subtype.
+    # UAZAPI sends a `mediaType` field (e.g. 'image', 'video', 'audio', 'document',
+    # 'gif', 'ptt', 'sticker') and/or a MIME-based mimetype.
     if msg_type == 'media':
+        media_type_hint = (msg_obj.get('mediaType') or '').lower()  # 'image','video','audio','document','gif','ptt','sticker'
         mimetype = (msg_obj.get('mimetype') or msg_obj.get('mimeType') or '').lower()
         filename = (msg_obj.get('fileName') or msg_obj.get('filename') or '').lower()
-        if mimetype.startswith('image/') or filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+
+        _MEDIATYPE_MAP = {
+            'image': 'imageMessage',
+            'video': 'videoMessage',
+            'gif':   'videoMessage',   # GIFs are looping videos in WA
+            'audio': 'audioMessage',
+            'ptt':   'audioMessage',
+            'document': 'documentMessage',
+            'sticker': 'stickerMessage',
+        }
+        if media_type_hint in _MEDIATYPE_MAP:
+            msg_type = _MEDIATYPE_MAP[media_type_hint]
+        elif mimetype.startswith('image/') or filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
             msg_type = 'imageMessage'
         elif mimetype.startswith('video/') or filename.endswith(('.mp4', '.mov', '.avi', '.webm')):
             msg_type = 'videoMessage'
@@ -226,10 +246,12 @@ def handle_message(payload: dict):
         msg_obj.get('caption') or msg_obj.get('message') or ''
     )
 
-    # Media URL
+    # Media URL — UAZAPI may use 'content', 'mediaUrl', 'fileURL', or 'url'
+    _content = msg_obj.get('content') or ''
     file_url = (
         msg_obj.get('mediaUrl') or msg_obj.get('fileURL') or
-        msg_obj.get('url') or ''
+        msg_obj.get('url') or
+        (_content if isinstance(_content, str) and _content.startswith('http') else '') or ''
     )
 
     # Timestamp
