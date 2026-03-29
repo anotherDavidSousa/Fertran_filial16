@@ -4,7 +4,7 @@
 {% block title %}WhatsApp{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'wpp/css/wpp.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'wpp/css/wpp.css' %}?v=4">
 <style>
 /* Override main-content padding for the WPP full-viewport shell */
 .layout-with-sidebar .main-content {
@@ -165,6 +165,7 @@ const WPP = (() => {
     let activeJid = '{{ active_jid|escapejs }}';
     let lastMsgId  = 0;
     let pollTimer  = null;
+    let pollCount  = 0;
     let groupTimer = null;
     let isDrawerOpen = false;
 
@@ -295,22 +296,48 @@ const WPP = (() => {
 
     // ── Message element builder (for polling) ─────────────────────────────────
 
+    function buildQuoteBar(m) {
+        if (!m.quoted_msg_id && !m.quoted_texto) return '';
+        const typeIco = {'image':'📷','video':'📹','audio':'🎤','document':'📄','sticker':'🪄'};
+        const ico = typeIco[m.quoted_tipo] || '';
+        const preview = m.quoted_texto
+            ? esc(m.quoted_texto.slice(0,80)) + (m.quoted_texto.length > 80 ? '…' : '')
+            : (ico ? ico + ' Mídia' : '…');
+        const sender = m.quoted_sender_nome ? `<span class="wpp-quote-sender">${esc(m.quoted_sender_nome)}</span>` : '';
+        return `<div class="wpp-quote">${sender}<span class="wpp-quote-text">${preview}</span></div>`;
+    }
+
+    function buildReactions(reacoes) {
+        if (!reacoes || !Object.keys(reacoes).length) return '';
+        // Group by emoji → count
+        const counts = {};
+        for (const emoji of Object.values(reacoes)) {
+            counts[emoji] = (counts[emoji] || 0) + 1;
+        }
+        const pills = Object.entries(counts)
+            .map(([e, n]) => `<span class="wpp-reaction">${e}${n > 1 ? `<span class="wpp-reaction-count">${n}</span>` : ''}</span>`)
+            .join('');
+        return `<div class="wpp-reactions">${pills}</div>`;
+    }
+
     function buildMsgEl(m) {
         const div = document.createElement('div');
         div.className = 'wpp-msg ' + (m.from_me ? 'wpp-out' : 'wpp-in');
         div.dataset.id = m.id;
+        div.dataset.msgId = m.msg_id || '';
 
         const mediaUrl = m.media_minio_key ? `/wpp/api/media/${m.media_minio_key}` : '';
+        const quoteBar = buildQuoteBar(m);
 
         let body = '';
         if (m.tipo === 'text') {
-            body = `<span class="wpp-msg-text">${wppFmt(m.texto)}</span>`;
+            body = `${quoteBar}<span class="wpp-msg-text">${wppFmt(m.texto)}</span>`;
         } else if (m.tipo === 'image' && mediaUrl) {
-            body = `<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-img" onclick="WPP.lightbox(this.src)">${m.texto ? `<span class="wpp-img-caption">${esc(m.texto)}</span>` : ''}</div>`;
+            body = `${quoteBar}<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-img" onclick="WPP.lightbox(this.src)">${m.texto ? `<span class="wpp-img-caption">${esc(m.texto)}</span>` : ''}</div>`;
         } else if (m.tipo === 'sticker' && mediaUrl) {
             body = `<div class="wpp-img-wrap"><img src="${mediaUrl}" loading="lazy" class="wpp-sticker" onclick="WPP.lightbox(this.src)"></div>`;
         } else if (m.tipo === 'audio' && mediaUrl) {
-            body = `<div class="wpp-audio" data-src="${mediaUrl}">
+            body = `${quoteBar}<div class="wpp-audio" data-src="${mediaUrl}">
                 <button class="wpp-audio-btn" type="button">
                     <svg class="wpp-ico wpp-ico-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
                     <svg class="wpp-ico wpp-ico-pause" viewBox="0 0 24 24" style="display:none"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -320,10 +347,10 @@ const WPP = (() => {
                 <audio preload="none"></audio>
             </div>`;
         } else if (m.tipo === 'video' && mediaUrl) {
-            body = `<video class="wpp-video" controls preload="none" src="${mediaUrl}"></video>`;
+            body = `${quoteBar}<video class="wpp-video" controls preload="none" src="${mediaUrl}"></video>`;
         } else if (m.tipo === 'document' && mediaUrl) {
             const fname = mediaUrl.split('/').pop().split('?')[0];
-            body = `<a class="wpp-doc" href="${mediaUrl}" target="_blank" rel="noopener" download>
+            body = `${quoteBar}<a class="wpp-doc" href="${mediaUrl}" target="_blank" rel="noopener" download>
                 <span class="wpp-doc-icon">📄</span>
                 <span class="wpp-doc-info"><span class="wpp-doc-name">${esc(fname)}</span><span class="wpp-doc-type">Documento</span></span>
                 <span class="wpp-doc-dl">⬇</span></a>`;
@@ -331,11 +358,12 @@ const WPP = (() => {
             const label = m.tipo === 'image' ? '📷 Foto' : m.tipo === 'audio' ? '🎤 Áudio'
                 : m.tipo === 'video' ? '📹 Vídeo' : m.tipo === 'document' ? '📄 Documento'
                 : m.tipo === 'sticker' ? '🪄 Sticker' : '📎 Mídia';
-            body = `<span class="wpp-msg-text wpp-media-na">${label} (não disponível)</span>`;
+            body = `${quoteBar}<span class="wpp-msg-text wpp-media-na">${label} (não disponível)</span>`;
         }
 
         const tick = m.from_me ? '<span class="wpp-ticks">✓✓</span>' : '';
-        const bubble = `<div class="wpp-bubble">${body}<div class="wpp-msg-meta"><span class="wpp-msg-time">${fmtTime(m.timestamp)}</span>${tick}</div></div>`;
+        const reactions = buildReactions(m.reacoes);
+        const bubble = `<div class="wpp-bubble">${body}<div class="wpp-msg-meta"><span class="wpp-msg-time">${fmtTime(m.timestamp)}</span>${tick}</div></div>${reactions}`;
 
         if (!m.from_me) {
             const color = strColor(m.sender_nome || '');
@@ -350,6 +378,20 @@ const WPP = (() => {
             div.innerHTML = bubble;
         }
         return div;
+    }
+
+    // Update reactions on an already-rendered message (called from polling)
+    function updateReactions(msgDbId, reacoes) {
+        const el = document.querySelector(`.wpp-msg[data-id="${msgDbId}"]`);
+        if (!el) return;
+        let reactEl = el.querySelector('.wpp-reactions');
+        const html = buildReactions(reacoes);
+        if (html) {
+            if (reactEl) { reactEl.outerHTML = html; }
+            else { el.querySelector('.wpp-bubble')?.insertAdjacentHTML('afterend', html); }
+        } else if (reactEl) {
+            reactEl.remove();
+        }
     }
 
     // ── Polling ───────────────────────────────────────────────────────────────
@@ -375,6 +417,17 @@ const WPP = (() => {
                     if (atBottom) scrollBottom(true);
                 })
                 .catch(() => {});
+            // Also poll reactions (less frequent — every ~15s via counter)
+            if (!(pollCount % 5)) {
+                fetch(`/wpp/api/chat/${encodeURIComponent(jid)}/reacoes/`)
+                    .then(r => r.json())
+                    .then(data => {
+                        for (const [id, reacoes] of Object.entries(data)) {
+                            updateReactions(id, reacoes);
+                        }
+                    }).catch(() => {});
+            }
+            pollCount++;
         }, 3000);
     }
 

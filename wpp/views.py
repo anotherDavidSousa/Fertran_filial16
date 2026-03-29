@@ -253,12 +253,29 @@ def mensagens_json(request, jid):
         qs.order_by('timestamp').values(
             'id', 'sender_jid', 'sender_nome', 'from_me', 'tipo', 'texto',
             'media_minio_key', 'timestamp', 'enviado_por__username',
+            'quoted_msg_id', 'quoted_sender_nome', 'quoted_texto', 'quoted_tipo',
+            'reacoes',
         )
     )
     for m in msgs:
         if m['timestamp']:
             m['timestamp'] = timezone.localtime(m['timestamp']).isoformat()
     return JsonResponse({'mensagens': msgs})
+
+
+@login_required
+@require_menu_perm('wpp')
+def reacoes_json(request, jid):
+    """Returns {db_id: reacoes_dict} for messages in this chat with at least one reaction (last 48h)."""
+    from datetime import timedelta
+    cutoff = timezone.now() - timedelta(hours=48)
+    qs = (
+        Mensagem.objects
+        .filter(jid_chat=jid, timestamp__gte=cutoff)
+        .exclude(reacoes={})
+        .values('id', 'reacoes')
+    )
+    return JsonResponse({str(m['id']): m['reacoes'] for m in qs})
 
 
 @login_required

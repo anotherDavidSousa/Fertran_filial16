@@ -15,6 +15,7 @@ urlpatterns = [
     # AJAX — data endpoints
     path('api/grupos/', views.grupos_json, name='grupos_json'),
     path('api/chat/<str:jid>/mensagens/', views.mensagens_json, name='mensagens_json'),
+    path('api/chat/<str:jid>/reacoes/', views.reacoes_json, name='reacoes_json'),
     path('api/chat/<str:jid>/enviar/', views.enviar_mensagem, name='enviar_mensagem'),
     path('api/pendencias/criar/', views.criar_pendencia, name='criar_pendencia'),
     path('api/pendencias/<int:pk>/resolver/', views.resolver_pendencia, name='resolver_pendencia'),

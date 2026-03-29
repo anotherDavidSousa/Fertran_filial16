@@ -569,6 +569,64 @@
 .wpp-doc-type { font-size: .72rem; color: var(--wa-text2); display: block; }
 .wpp-doc-dl   { color: var(--wa-text2); font-size: 1rem; flex-shrink: 0; }
 
+/* ── Quoted / reply bar ───────────────────────────────────────────────────── */
+.wpp-quote {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0,0,0,.15);
+  border-left: 3px solid var(--wa-green);
+  border-radius: 4px;
+  padding: .3rem .5rem;
+  margin-bottom: .35rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+[data-theme="light"] .wpp-quote { background: rgba(0,0,0,.06); }
+.wpp-quote-sender {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--wa-green);
+  margin-bottom: .1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wpp-quote-text {
+  font-size: .78rem;
+  color: var(--wa-text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Reactions ────────────────────────────────────────────────────────────── */
+.wpp-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem;
+  margin-top: .2rem;
+}
+.wpp-out + .wpp-reactions,
+.wpp-out .wpp-reactions,
+.wpp-msg.wpp-out .wpp-reactions { justify-content: flex-end; }
+.wpp-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: .15rem;
+  background: var(--wa-header);
+  border: 1px solid var(--wa-border);
+  border-radius: 999px;
+  padding: .1rem .4rem;
+  font-size: .9rem;
+  line-height: 1.3;
+  cursor: default;
+}
+[data-theme="light"] .wpp-reaction { background: #fff; border-color: #d1d7db; }
+.wpp-reaction-count {
+  font-size: .72rem;
+  color: var(--wa-text2);
+}
+
 /* ── Compose bar ──────────────────────────────────────────────────────────── */
 .wpp-compose {
   display: flex;

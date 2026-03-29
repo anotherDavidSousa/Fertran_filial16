@@ -87,6 +87,21 @@
 
                 <div class="wpp-bubble">
 
+                    {% if msg.quoted_msg_id or msg.quoted_texto %}
+                    <div class="wpp-quote">
+                        {% if msg.quoted_sender_nome %}<span class="wpp-quote-sender">{{ msg.quoted_sender_nome }}</span>{% endif %}
+                        <span class="wpp-quote-text">
+                            {% if msg.quoted_tipo == 'image' %}📷 Foto
+                            {% elif msg.quoted_tipo == 'video' %}📹 Vídeo
+                            {% elif msg.quoted_tipo == 'audio' %}🎤 Áudio
+                            {% elif msg.quoted_tipo == 'document' %}📄 Documento
+                            {% elif msg.quoted_tipo == 'sticker' %}🪄 Sticker
+                            {% elif msg.quoted_texto %}{{ msg.quoted_texto|truncatechars:80 }}
+                            {% else %}…{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+
                     {% if msg.tipo == 'text' %}
                         <span class="wpp-msg-text">{{ msg.texto|wpp_format|safe }}</span>
 
@@ -179,6 +194,14 @@
 
                 {% if not msg.from_me %}
                 </div>{# /wpp-msg-col #}
+                {% endif %}
+
+                {% if msg.reacoes %}
+                <div class="wpp-reactions">
+                    {% for sender, emoji in msg.reacoes.items %}
+                    <span class="wpp-reaction" title="{{ sender }}">{{ emoji }}</span>
+                    {% endfor %}
+                </div>
                 {% endif %}
 
             </div>

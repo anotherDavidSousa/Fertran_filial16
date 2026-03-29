@@ -131,6 +131,14 @@ class Mensagem(models.Model):
     tipo = models.CharField('Tipo', max_length=20, choices=TYPE_CHOICES, default=TYPE_TEXT)
     texto = models.TextField('Texto', blank=True)
     media_minio_key = models.CharField('Chave MinIO da mídia', max_length=500, blank=True)
+    # Quoted/reply context ───────────────────────────────────────────────────
+    quoted_msg_id = models.CharField('ID mensagem citada', max_length=100, blank=True)
+    quoted_sender_nome = models.CharField('Nome remetente citado', max_length=200, blank=True)
+    quoted_texto = models.TextField('Texto citado', blank=True)
+    quoted_tipo = models.CharField('Tipo citado', max_length=20, blank=True)
+    # Reactions ──────────────────────────────────────────────────────────────
+    # {sender_jid: emoji, ...}  — multiple people can react with different emojis
+    reacoes = models.JSONField('Reações', default=dict, blank=True)
     timestamp = models.DateTimeField('Timestamp', db_index=True)
     criado_em = models.DateTimeField('Criado em', auto_now_add=True, db_default=Now())
 
