@@ -32,6 +32,7 @@ Real UAZAPI payload shape (observed):
 import logging
 import mimetypes
 import os
+import threading
 from datetime import datetime, timezone as dt_tz
 
 import requests
@@ -53,6 +54,7 @@ _TYPE_MAP = {
     'imageMessage':      Mensagem.TYPE_IMAGE,
     'video':             Mensagem.TYPE_VIDEO,
     'videoMessage':      Mensagem.TYPE_VIDEO,
+    'gifMessage':        Mensagem.TYPE_VIDEO,   # GIFs are looping videos in WA
     'document':          Mensagem.TYPE_DOCUMENT,
     'documentMessage':   Mensagem.TYPE_DOCUMENT,
     'audio':             Mensagem.TYPE_AUDIO,
@@ -89,14 +91,57 @@ def _upload_to_minio(content: bytes, key: str, content_type: str = 'application/
         return False
 
 
+_MAX_MEDIA_BYTES = 80 * 1024 * 1024  # 80 MB cap
+
+
 def _fetch_media(url: str, token: str) -> bytes | None:
+    """Download media with streaming + size cap to avoid OOM on large videos."""
     try:
-        r = requests.get(url, headers={'token': token}, timeout=30)
+        r = requests.get(url, headers={'token': token}, timeout=60, stream=True)
         r.raise_for_status()
-        return r.content
+        # Respect content-length if present
+        cl = int(r.headers.get('content-length', 0))
+        if cl and cl > _MAX_MEDIA_BYTES:
+            logger.warning('Media too large (%d bytes) — skipping download from %s', cl, url)
+            return None
+        chunks = []
+        downloaded = 0
+        for chunk in r.iter_content(chunk_size=131072):  # 128 KB chunks
+            downloaded += len(chunk)
+            if downloaded > _MAX_MEDIA_BYTES:
+                logger.warning('Media exceeded 80 MB during download — aborting %s', url)
+                return None
+            chunks.append(chunk)
+        return b''.join(chunks)
     except Exception as exc:
         logger.error('Media download failed from %s: %s', url, exc)
         return None
+
+
+def _bg_download_media(msg_id: str, url: str, token: str,
+                       is_group: bool, chat_jid: str, ts: datetime, msg_type: str) -> None:
+    """Background thread: download media → upload to MinIO → update Mensagem row."""
+    from django.db import close_old_connections
+    try:
+        close_old_connections()
+        ext = os.path.splitext(url.split('?')[0])[1] or ''
+        filename = f'{msg_type}{ext}'
+        content = _fetch_media(url, token)
+        if not content:
+            return
+        key = _minio_key(is_group, chat_jid, ts, msg_id, filename)
+        ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        if _upload_to_minio(content, key, ct):
+            Mensagem.objects.filter(msg_id=msg_id).update(media_minio_key=key)
+            logger.info('WPP media saved (bg): %s', key)
+    except Exception as exc:
+        logger.error('Background media download failed for msg_id=%s: %s', msg_id, exc)
+    finally:
+        try:
+            from django.db import close_old_connections
+            close_old_connections()
+        except Exception:
+            pass
 
 
 def _minio_key(is_group: bool, jid: str, ts: datetime, msg_id: str, filename: str) -> str:
@@ -235,18 +280,7 @@ def handle_message(payload: dict):
     # Resolve instance for media token
     instance = getattr(grupo, 'instance', None) or WppInstance.objects.filter(ativo=True).first()
 
-    media_minio_key = ''
-    if file_url and msg_type in _MEDIA_TYPES and instance:
-        ext = os.path.splitext(file_url.split('?')[0])[1] or ''
-        filename = f'{msg_type}{ext}'
-        content = _fetch_media(file_url, instance.token)
-        if content:
-            key = _minio_key(is_group, chat_jid, ts, msg_id, filename)
-            ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-            if _upload_to_minio(content, key, ct):
-                media_minio_key = key
-                logger.info('WPP media saved: %s', key)
-
+    # Save message immediately (media_minio_key filled by background thread)
     Mensagem.objects.create(
         msg_id=msg_id,
         grupo=grupo,
@@ -257,7 +291,17 @@ def handle_message(payload: dict):
         from_me=from_me,
         tipo=tipo,
         texto=text,
-        media_minio_key=media_minio_key,
+        media_minio_key='',
         timestamp=ts,
     )
     logger.info('WPP message SAVED: msg_id=%s chat=%s type=%s', msg_id, chat_jid, tipo)
+
+    # Download media asynchronously so the webhook returns immediately
+    if file_url and msg_type in _MEDIA_TYPES and instance:
+        t = threading.Thread(
+            target=_bg_download_media,
+            args=(msg_id, file_url, instance.token, is_group, chat_jid, ts, msg_type),
+            daemon=True,
+            name=f'wpp-media-{msg_id[:12]}',
+        )
+        t.start()
