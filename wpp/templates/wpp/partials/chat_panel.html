@@ -6,7 +6,6 @@
 {% endcomment %}
 
 <!-- ── Chat header ──────────────────────────────────────────────────────────── -->
-{% with chat_nome=grupo.nome|default:contato.nome|default:jid %}
 <div class="wpp-chat-header" data-jid="{{ jid|escapejs }}">
     {% if grupo %}
     <div class="wpp-avatar wpp-avatar-md" style="background:{{ grupo.nome|avatar_color }}">
@@ -55,7 +54,6 @@
     </button>
     {% endif %}
 </div>
-{% endwith %}
 
 <!-- ── Body: messages + info drawer ────────────────────────────────────────── -->
 <div class="wpp-chat-body">
