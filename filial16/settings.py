@@ -12,14 +12,11 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'dev-secret-change-in-production-filial16'
-)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
-DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
+DEBUG = os.environ.get('DJANGO_DEBUG') == '1'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS')
 
 CSRF_TRUSTED_ORIGINS = [
     x.strip() for x in os.environ.get(
@@ -78,11 +75,11 @@ WSGI_APPLICATION = 'filial16.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'filial16'),
-        'USER': os.environ.get('POSTGRES_USER', 'filial16'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'filial16'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'NAME': os.environ.get('POSTGRES_DB'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': os.environ.get('POSTGRES_HOST'),
+        'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {},
     }
 }
@@ -104,11 +101,11 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
 
 # MinIO via django-storages + boto3
-_MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'localhost:9000')
-_MINIO_ACCESS = os.environ.get('MINIO_ACCESS_KEY', 'filial16')
-_MINIO_SECRET = os.environ.get('MINIO_SECRET_KEY', 'filial16minio')
-_MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'filial16')
-_MINIO_SSL = os.environ.get('MINIO_USE_SSL', '0').lower() in ('1', 'true', 'yes')
+_MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT')
+_MINIO_ACCESS = os.environ.get('MINIO_ACCESS_KEY')
+_MINIO_SECRET = os.environ.get('MINIO_SECRET_KEY')
+_MINIO_BUCKET = os.environ.get('MINIO_BUCKET')
+_MINIO_SSL = os.environ.get('MINIO_USE_SSL')
 
 AWS_ACCESS_KEY_ID = _MINIO_ACCESS
 AWS_SECRET_ACCESS_KEY = _MINIO_SECRET

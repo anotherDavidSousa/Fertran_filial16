@@ -43,5 +43,6 @@ upload_xmls.py
 
 # Adicione isso ao arquivo .gitignore na raiz do projeto
 nginx/ssl/
+nginx/nginx.conf
 minio/
 .env
