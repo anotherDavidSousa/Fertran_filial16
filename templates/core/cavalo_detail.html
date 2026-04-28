@@ -2,87 +2,33 @@
 {% load static %}
 {% block title %}Cavalo - {{ cavalo.placa|default:"Sem placa" }}
 <style>
-/* ── Mensagens de feedback ─────────────────────────── */
 .acoes-messages { margin-bottom: 1rem; }
 .acoes-msg {
-  padding: .6rem 1rem; border-radius: 8px; margin-bottom: .4rem;
-  font-size: .875rem; font-weight: 500;
-  background: var(--accent-muted); color: var(--text-primary);
-  border: 1px solid var(--border);
+  padding: .55rem 1rem; border-radius: 8px; margin-bottom: .35rem;
+  font-size: .875rem; background: var(--accent-muted);
+  color: var(--text-primary); border: 1px solid var(--border);
 }
-
-/* ── Painel de ações rápidas ───────────────────────── */
 .acoes-rapidas-panel { margin-bottom: 1.25rem; }
-.acoes-grid {
-  display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .75rem; align-items: flex-start;
-}
-/* Forms no grid não podem quebrar o flex */
-.acoes-grid > form { display: contents; }
-
-/* Botão base — herda visual do tema */
-.acao-btn {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .5rem 1rem;
-  border-radius: 8px;
-  font-size: .85rem; font-weight: 600; font-family: inherit;
-  border: 1.5px solid transparent;
-  cursor: pointer; text-decoration: none;
-  transition: filter .15s, box-shadow .15s;
-  white-space: nowrap; line-height: 1.4;
-}
-.acao-btn:hover { filter: brightness(1.12); box-shadow: 0 2px 8px var(--shadow); }
-.acao-btn svg { width: 15px; height: 15px; flex-shrink: 0; vertical-align: middle; }
-
-/* Variantes — usam variáveis do tema onde possível */
-.acao-agregar {
-  background: var(--success); color: #fff;
-  border-color: var(--success);
-}
-.acao-desagregar {
-  background: transparent;
-  color: #e03131;
-  border-color: #e03131;
-}
-[data-theme="dark"] .acao-desagregar { color: #ff6b6b; border-color: #ff6b6b; }
-
-.acao-parar {
-  background: transparent;
-  color: #e67700;
-  border-color: #e67700;
-}
-[data-theme="dark"] .acao-parar { color: #ffa94d; border-color: #ffa94d; }
-
-.acao-reativar {
-  background: var(--success); color: #fff;
-  border-color: var(--success);
-}
-.acao-motorista {
-  background: var(--accent); color: #fff;
-  border-color: var(--accent);
-}
-.acao-proprietario {
-  background: transparent;
-  color: var(--accent); border-color: var(--accent);
-}
-
-/* ── Painel inline (motorista / proprietário) ──────── */
+.acoes-grid { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .75rem; align-items: center; }
+/* Variantes de botão que respeitam o tema */
+.btn-acao-verde   { background: var(--success) !important; color: #fff !important; border: none !important; }
+.btn-acao-perigo  { background: transparent !important; border: 1.5px solid #e03131 !important; color: #e03131 !important; }
+.btn-acao-alerta  { background: transparent !important; border: 1.5px solid #e67700 !important; color: #e67700 !important; }
+[data-theme="dark"] .btn-acao-perigo  { border-color: #ff8787 !important; color: #ff8787 !important; }
+[data-theme="dark"] .btn-acao-alerta  { border-color: #ffa94d !important; color: #ffa94d !important; }
+.btn-acao-verde:hover, .btn-acao-perigo:hover, .btn-acao-alerta:hover { filter: brightness(1.1); }
+/* Painel inline */
 .acao-inline-panel {
-  margin-top: .75rem; padding: 1rem 1.25rem;
-  background: var(--bg-card);
-  border-radius: 10px; border: 1px solid var(--border);
-  box-shadow: 0 2px 8px var(--shadow);
+  margin-top: .75rem; padding: .9rem 1.1rem;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 2px 8px var(--shadow);
 }
-.acao-inline-form {
-  display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-}
-.acao-inline-form label {
-  font-weight: 600; font-size: .875rem; color: var(--text-primary);
-}
+.acao-inline-form { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.acao-inline-form label { font-weight: 600; font-size: .875rem; color: var(--text-primary); }
 .acao-inline-form select {
-  padding: .45rem .75rem;
-  border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg-page); color: var(--text-primary);
-  font-size: .875rem; min-width: 220px; font-family: inherit;
+  padding: .45rem .75rem; border-radius: 8px;
+  border: 1px solid var(--border); font-size: .875rem; font-family: inherit;
+  background: var(--bg-page); color: var(--text-primary); min-width: 220px;
 }
 </style>
 {% endblock %}
@@ -113,7 +59,7 @@
 {% if messages %}
 <div class="acoes-messages">
   {% for msg in messages %}
-  <div class="acoes-msg acoes-msg-{{ msg.tags }}">{{ msg }}</div>
+  <div class="acoes-msg">{{ msg }}</div>
   {% endfor %}
 </div>
 {% endif %}
@@ -123,59 +69,33 @@
   <div class="acoes-grid">
 
     {% if cavalo.situacao == 'desagregado' %}
-    {# === AGREGAR === #}
-    <a href="{% url 'core:agregar_cavalo' cavalo.pk %}" class="acao-btn acao-agregar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      Agregar Veículo
-    </a>
+    <a href="{% url 'core:agregar_cavalo' cavalo.pk %}" class="btn-core btn-acao-verde">Agregar Veículo</a>
     {% else %}
-    {# === DESAGREGAR === #}
-    <form method="post" action="{% url 'core:desagregar_cavalo' cavalo.pk %}" onsubmit="return confirm('Desagregar {{ cavalo.placa }}? Isso irá remover a carreta e o motorista vinculados e marcar o veículo como desagregado.');">
+    <form method="post" action="{% url 'core:desagregar_cavalo' cavalo.pk %}" style="display:inline;" onsubmit="return confirm('Desagregar {{ cavalo.placa }}? Carreta e motorista serão desvinculados.');">
       {% csrf_token %}
-      <button type="submit" class="acao-btn acao-desagregar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        Desagregar
-      </button>
+      <button type="submit" class="btn-core btn-acao-perigo">Desagregar</button>
     </form>
     {% endif %}
 
     {% if cavalo.situacao == 'ativo' %}
-    {# === PARAR PARA MANUTENCAO === #}
-    <form method="post" action="{% url 'core:alterar_situacao_cavalo' cavalo.pk %}">
+    <form method="post" action="{% url 'core:alterar_situacao_cavalo' cavalo.pk %}" style="display:inline;">
       {% csrf_token %}
       <input type="hidden" name="situacao" value="parado">
-      <button type="submit" class="acao-btn acao-parar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-        Parar p/ Manutenção
-      </button>
+      <button type="submit" class="btn-core btn-acao-alerta">Parar p/ Manutenção</button>
     </form>
     {% elif cavalo.situacao == 'parado' %}
-    {# === REATIVAR === #}
-    <form method="post" action="{% url 'core:alterar_situacao_cavalo' cavalo.pk %}">
+    <form method="post" action="{% url 'core:alterar_situacao_cavalo' cavalo.pk %}" style="display:inline;">
       {% csrf_token %}
       <input type="hidden" name="situacao" value="ativo">
-      <button type="submit" class="acao-btn acao-reativar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Reativar
-      </button>
+      <button type="submit" class="btn-core btn-acao-verde">Reativar</button>
     </form>
     {% endif %}
 
-    {# === TROCAR MOTORISTA === #}
-    <button type="button" class="acao-btn acao-motorista" onclick="togglePanel('panel-motorista')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Trocar Motorista
-    </button>
-
-    {# === TRANSFERIR PROPRIETARIO === #}
-    <button type="button" class="acao-btn acao-proprietario" onclick="togglePanel('panel-proprietario')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-      Transferir Proprietário
-    </button>
+    <button type="button" class="btn-core btn-core-secondary" onclick="togglePanel('panel-motorista')">Trocar Motorista</button>
+    <button type="button" class="btn-core btn-core-secondary" onclick="togglePanel('panel-proprietario')">Transferir Proprietário</button>
 
   </div>
 
-  {# Painel inline: Trocar Motorista #}
   <div id="panel-motorista" class="acao-inline-panel" style="display:none;">
     <form method="post" action="{% url 'core:trocar_motorista_cavalo' cavalo.pk %}">
       {% csrf_token %}
@@ -185,7 +105,7 @@
           <option value="">— Sem motorista —</option>
           {% for m in motoristas %}
           <option value="{{ m.pk }}" {% if cavalo.motorista and cavalo.motorista.pk == m.pk %}selected{% endif %}>
-            {{ m.nome }}{% if m.cavalo and m.cavalo.pk != cavalo.pk %} (vinculado a {{ m.cavalo.placa }}){% endif %}
+            {{ m.nome }}{% if m.cavalo and m.cavalo.pk != cavalo.pk %} (em {{ m.cavalo.placa }}){% endif %}
           </option>
           {% endfor %}
         </select>
@@ -195,7 +115,6 @@
     </form>
   </div>
 
-  {# Painel inline: Transferir Proprietario #}
   <div id="panel-proprietario" class="acao-inline-panel" style="display:none;">
     <form method="post" action="{% url 'core:transferir_proprietario_cavalo' cavalo.pk %}">
       {% csrf_token %}
