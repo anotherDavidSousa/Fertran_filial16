@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Agregar Cavalo - {{ cavalo.placa|default:"Sem placa" }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'core/css/agregamento.css' %}">{% endblock %}
+{% block content %}
+
+{% if messages %}
+<div style="margin-bottom:1rem;">
+  {% for msg in messages %}
+  <div style="padding:.6rem 1rem;border-radius:6px;margin-bottom:.4rem;font-size:.9rem;
+    {% if msg.tags == 'error' %}background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;
+    {% else %}background:#d4edda;color:#155724;border:1px solid #c3e6cb;{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="detail-hero">
+  <div class="detail-hero-left">
+    <svg class="detail-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    <h1>Agregar — {{ cavalo.placa|default:"Cavalo" }}</h1>
+    <p class="description">Vincule a carreta e o motorista ao veículo para agregá-lo.</p>
+    <div class="detail-hero-actions">
+      <a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </div>
+</div>
+
+<div class="panel-detail" style="max-width:640px;">
+  <div class="panel-title">Dados do Agregamento</div>
+
+  <form method="post" action="{% url 'core:agregar_cavalo' cavalo.pk %}">
+    {% csrf_token %}
+
+    <div class="wizard-fields">
+
+      {# Info do cavalo #}
+      <div class="wizard-info-row">
+        <div class="wizard-info-item">
+          <span class="wizard-info-label">Cavalo</span>
+          <span class="wizard-info-value">{{ cavalo.placa|default:"-" }}</span>
+        </div>
+        <div class="wizard-info-item">
+          <span class="wizard-info-label">Tipo</span>
+          <span class="wizard-info-value">{{ cavalo.get_tipo_display|default:"-" }}</span>
+        </div>
+        <div class="wizard-info-item">
+          <span class="wizard-info-label">Classificação</span>
+          <span class="wizard-info-value">{{ cavalo.get_classificacao_display|default:"-" }}</span>
+        </div>
+        <div class="wizard-info-item">
+          <span class="wizard-info-label">Proprietário</span>
+          <span class="wizard-info-value">{{ cavalo.proprietario.nome_razao_social|default:"-" }}</span>
+        </div>
+      </div>
+
+      <hr class="wizard-divider">
+
+      {% if cavalo.tipo != 'bi_truck' %}
+      <div class="wizard-field">
+        <label class="wizard-label" for="carreta">Carreta <span class="wizard-hint">(deixe em branco para agregar sem carreta)</span></label>
+        <select name="carreta" id="carreta" class="wizard-select">
+          <option value="">— Sem carreta —</option>
+          {% for c in carretas_disponiveis %}
+          <option value="{{ c.pk }}"
+            {% if cavalo.carreta and cavalo.carreta.pk == c.pk %}selected{% endif %}>
+            {{ c.placa }}{% if c.tipo %} — {{ c.get_tipo_display }}{% endif %}{% if c.classificacao %} ({{ c.get_classificacao_display }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        {% if not carretas_disponiveis %}
+        <p class="wizard-alert">Nenhuma carreta disponível. <a href="{% url 'core:carreta_create' %}">Cadastrar nova carreta</a>.</p>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="wizard-note">Bi-truck — não requer carreta.</p>
+      {% endif %}
+
+      <div class="wizard-field">
+        <label class="wizard-label" for="motorista">Motorista <span class="wizard-hint">(deixe em branco para agregar sem motorista)</span></label>
+        <select name="motorista" id="motorista" class="wizard-select">
+          <option value="">— Sem motorista —</option>
+          {% for m in motoristas %}
+          <option value="{{ m.pk }}"
+            {% if motorista_atual and motorista_atual.pk == m.pk %}selected{% endif %}>
+            {{ m.nome }}{% if m.cpf %} — {{ m.cpf }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        {% if not motoristas %}
+        <p class="wizard-alert">Nenhum motorista disponível. <a href="{% url 'core:motorista_create' %}">Cadastrar novo motorista</a>.</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="wizard-actions">
+      <button type="submit" class="btn-core btn-core-primary" style="background:#2563eb;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>
+        Confirmar Agregamento
+      </button>
+      <a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<style>
+.wizard-fields { display: flex; flex-direction: column; gap: 1.25rem; padding: 1rem 0; }
+.wizard-info-row { display: flex; flex-wrap: wrap; gap: 1rem; background: var(--surface-2, #f1f5f9); border-radius: 8px; padding: .75rem 1rem; }
+.wizard-info-item { display: flex; flex-direction: column; min-width: 120px; }
+.wizard-info-label { font-size: .75rem; font-weight: 600; color: var(--text-muted, #6b7280); text-transform: uppercase; letter-spacing: .04em; }
+.wizard-info-value { font-size: .95rem; font-weight: 500; margin-top: .15rem; }
+.wizard-divider { border: none; border-top: 1px solid var(--border, #e2e8f0); margin: .25rem 0; }
+.wizard-field { display: flex; flex-direction: column; gap: .4rem; }
+.wizard-label { font-size: .9rem; font-weight: 600; }
+.wizard-hint { font-size: .8rem; font-weight: 400; color: var(--text-muted, #6b7280); }
+.wizard-select { padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--border, #dee2e6); font-size: .9rem; background: var(--surface, #fff); color: var(--text, #111); width: 100%; max-width: 480px; }
+.wizard-alert { font-size: .85rem; color: #b45309; background: #fef3c7; border-radius: 6px; padding: .4rem .75rem; margin-top: .25rem; }
+.wizard-note { font-size: .88rem; color: var(--text-muted, #6b7280); font-style: italic; }
+.wizard-actions { display: flex; gap: .75rem; margin-top: 1.5rem; flex-wrap: wrap; align-items: center; }
+</style>
+
+{% endblock %}

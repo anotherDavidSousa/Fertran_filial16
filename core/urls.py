@@ -18,6 +18,12 @@ urlpatterns = [
     path('cavalos/documento-extra/<int:pk>/', views.cavalo_download_documento_extra, name='cavalo_download_documento_extra'),
     path('cavalos/<int:pk>/remover-documento/', views.cavalo_remover_documento, name='cavalo_remover_documento'),
     path('cavalos/documento-extra/<int:pk>/remover/', views.cavalo_remover_documento_extra, name='cavalo_remover_documento_extra'),
+    # Acoes rapidas
+    path('cavalos/<int:pk>/desagregar/', views.desagregar_cavalo, name='desagregar_cavalo'),
+    path('cavalos/<int:pk>/agregar/', views.agregar_cavalo, name='agregar_cavalo'),
+    path('cavalos/<int:pk>/alterar-situacao/', views.alterar_situacao_cavalo, name='alterar_situacao_cavalo'),
+    path('cavalos/<int:pk>/trocar-motorista/', views.trocar_motorista_cavalo, name='trocar_motorista_cavalo'),
+    path('cavalos/<int:pk>/transferir-proprietario/', views.transferir_proprietario_cavalo, name='transferir_proprietario_cavalo'),
     path('carretas/', views.carreta_list, name='carreta_list'),
     path('carretas/nova/', views.carreta_create, name='carreta_create'),
     path('carretas/<int:pk>/', views.carreta_detail, name='carreta_detail'),

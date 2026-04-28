@@ -307,7 +307,14 @@ def cavalo_detail(request, pk):
         pk=pk
     )
     logs = cavalo.logs.all()[:10]
-    return render(request, 'core/cavalo_detail.html', {'cavalo': cavalo, 'logs': logs})
+    motoristas = Motorista.objects.all().order_by('nome')
+    proprietarios = Proprietario.objects.all().order_by('nome_razao_social')
+    return render(request, 'core/cavalo_detail.html', {
+        'cavalo': cavalo,
+        'logs': logs,
+        'motoristas': motoristas,
+        'proprietarios': proprietarios,
+    })
 
 
 @login_required
@@ -908,3 +915,245 @@ def api_me(request):
         'email': user.email,
         'admin': user.is_staff,
     })
+
+
+# --- Acoes Rapidas do Cavalo ---------------------------------------------------
+
+@login_required
+@require_menu_perm('cavalos')
+def desagregar_cavalo(request, pk):
+    # Desagrega o cavalo em um clique: remove carreta, motorista e muda situacao.
+    if request.method != 'POST':
+        return redirect('core:cavalo_detail', pk=pk)
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+
+    carreta_placa = cavalo.carreta.placa if cavalo.carreta else None
+    motorista_nome = None
+
+    # 1. Desvincula motorista
+    try:
+        motorista = cavalo.motorista
+        if motorista:
+            motorista_nome = motorista.nome
+            motorista.cavalo = None
+            motorista.save()
+    except Exception:
+        pass
+
+    # 2. Remove carreta e define situacao — Cavalo.save() cuida do gestor/HistoricoGestor
+    cavalo.carreta = None
+    cavalo.situacao = 'desagregado'
+    cavalo.save()  # signal dispara -> remove da planilha Google Sheets
+
+    # 3. Log da operacao completa
+    descricao = 'Desagregacao manual do cavalo %s.' % cavalo.placa
+    if carreta_placa:
+        descricao += ' Carreta %s liberada.' % carreta_placa
+    if motorista_nome:
+        descricao += ' Motorista %s desvinculado.' % motorista_nome
+    LogCarreta.objects.create(
+        tipo='desagregacao',
+        cavalo=cavalo,
+        placa_cavalo=cavalo.placa,
+        carreta_anterior=carreta_placa,
+        motorista_anterior=motorista_nome,
+        descricao=descricao,
+    )
+
+    messages.success(request, 'Cavalo %s desagregado com sucesso.' % cavalo.placa)
+    return redirect('core:cavalo_detail', pk=pk)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def agregar_cavalo(request, pk):
+    # Wizard de agregamento: associa carreta e motorista em uma unica tela.
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+
+    if request.method == 'POST':
+        carreta_id = request.POST.get('carreta') or None
+        motorista_id = request.POST.get('motorista') or None
+        carreta_anterior_placa = cavalo.carreta.placa if cavalo.carreta else None
+
+        # Atualiza carreta (bi-truck nao usa carreta)
+        if cavalo.tipo != 'bi_truck':
+            if carreta_id:
+                try:
+                    carreta = Carreta.objects.get(pk=carreta_id)
+                    if cavalo.classificacao and carreta.classificacao and cavalo.classificacao != carreta.classificacao:
+                        messages.error(
+                            request,
+                            'A carreta selecionada e "%s" mas o cavalo e "%s". Devem ter a mesma classificacao.' % (
+                                carreta.get_classificacao_display(), cavalo.get_classificacao_display()
+                            )
+                        )
+                        return redirect('core:agregar_cavalo', pk=pk)
+                    # Libera carreta do cavalo anterior, se houver
+                    cavalo_anterior = getattr(carreta, 'cavalo_acoplado', None)
+                    if cavalo_anterior and cavalo_anterior.pk != cavalo.pk:
+                        cavalo_anterior.carreta = None
+                        cavalo_anterior.save()
+                    cavalo.carreta = carreta
+                except Carreta.DoesNotExist:
+                    pass
+            else:
+                cavalo.carreta = None
+
+        # Define situacao como ativo
+        cavalo.situacao = 'ativo'
+        cavalo.save()
+
+        # Remove motorista atual antes de vincular o novo
+        try:
+            motorista_existente = cavalo.motorista
+            if motorista_existente and (not motorista_id or str(motorista_existente.pk) != str(motorista_id)):
+                motorista_existente.cavalo = None
+                motorista_existente.save()
+        except Exception:
+            pass
+
+        # Atualiza motorista
+        motorista_novo_nome = None
+        if motorista_id:
+            try:
+                motorista = Motorista.objects.get(pk=motorista_id)
+                if motorista.cavalo and motorista.cavalo.pk != cavalo.pk:
+                    motorista.cavalo = None
+                    motorista.save()
+                motorista.cavalo = cavalo
+                motorista.save()
+                motorista_novo_nome = motorista.nome
+            except Motorista.DoesNotExist:
+                pass
+
+        # Log
+        nova_carreta_placa = cavalo.carreta.placa if cavalo.carreta else None
+        descricao = 'Cavalo %s agregado.' % cavalo.placa
+        if nova_carreta_placa:
+            descricao += ' Carreta: %s.' % nova_carreta_placa
+        if motorista_novo_nome:
+            descricao += ' Motorista: %s.' % motorista_novo_nome
+        LogCarreta.objects.create(
+            tipo='acoplamento',
+            cavalo=cavalo,
+            placa_cavalo=cavalo.placa,
+            carreta_anterior=carreta_anterior_placa,
+            carreta_nova=nova_carreta_placa,
+            motorista_novo=motorista_novo_nome,
+            descricao=descricao,
+        )
+
+        messages.success(request, 'Cavalo %s agregado com sucesso.' % cavalo.placa)
+        return redirect('core:cavalo_detail', pk=pk)
+
+    # GET - exibe o wizard
+    carretas_acopladas_ids = Cavalo.objects.exclude(carreta__isnull=True).exclude(pk=cavalo.pk).values_list('carreta_id', flat=True)
+    carretas_disponiveis = Carreta.objects.exclude(id__in=carretas_acopladas_ids).order_by('placa')
+    if cavalo.carreta:
+        carretas_disponiveis = (carretas_disponiveis | Carreta.objects.filter(pk=cavalo.carreta.pk)).order_by('placa')
+    motoristas_disponiveis = Motorista.objects.filter(cavalo__isnull=True).order_by('nome')
+    motorista_atual = None
+    try:
+        motorista_atual = cavalo.motorista
+    except Exception:
+        pass
+    if motorista_atual:
+        motoristas_disponiveis = (motoristas_disponiveis | Motorista.objects.filter(pk=motorista_atual.pk)).order_by('nome')
+    return render(request, 'core/cavalo_agregar.html', {
+        'cavalo': cavalo,
+        'carretas_disponiveis': carretas_disponiveis,
+        'motoristas': motoristas_disponiveis,
+        'motorista_atual': motorista_atual,
+    })
+
+
+@login_required
+@require_menu_perm('cavalos')
+def alterar_situacao_cavalo(request, pk):
+    # Altera situacao do cavalo entre ativo e parado sem abrir o form completo.
+    if request.method != 'POST':
+        return redirect('core:cavalo_detail', pk=pk)
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    nova_situacao = request.POST.get('situacao')
+    if nova_situacao in ('ativo', 'parado'):
+        cavalo.situacao = nova_situacao
+        cavalo.save()
+        messages.success(request, 'Situacao alterada para %s.' % cavalo.get_situacao_display())
+    return redirect('core:cavalo_detail', pk=pk)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def trocar_motorista_cavalo(request, pk):
+    # Troca ou remove o motorista vinculado ao cavalo.
+    if request.method != 'POST':
+        return redirect('core:cavalo_detail', pk=pk)
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    motorista_id = request.POST.get('motorista') or None
+
+    motorista_anterior_nome = None
+    try:
+        if cavalo.motorista:
+            motorista_anterior_nome = cavalo.motorista.nome
+            cavalo.motorista.cavalo = None
+            cavalo.motorista.save()
+    except Exception:
+        pass
+
+    motorista_novo_nome = None
+    if motorista_id:
+        try:
+            motorista = Motorista.objects.get(pk=motorista_id)
+            if motorista.cavalo and motorista.cavalo.pk != cavalo.pk:
+                motorista.cavalo = None
+                motorista.save()
+            motorista.cavalo = cavalo
+            motorista.save()
+            motorista_novo_nome = motorista.nome
+        except Motorista.DoesNotExist:
+            pass
+
+    LogCarreta.objects.create(
+        tipo='motorista_alterado' if motorista_novo_nome else 'motorista_removido',
+        cavalo=cavalo,
+        placa_cavalo=cavalo.placa,
+        motorista_anterior=motorista_anterior_nome,
+        motorista_novo=motorista_novo_nome,
+        descricao='Motorista alterado de "%s" para "%s" no cavalo %s.' % (
+            motorista_anterior_nome or '-', motorista_novo_nome or '-', cavalo.placa
+        ),
+    )
+    cavalo.save()  # dispara signal para sincronizar planilha
+
+    msg = ('Motorista alterado para %s.' % motorista_novo_nome) if motorista_novo_nome else 'Motorista removido.'
+    messages.success(request, msg)
+    return redirect('core:cavalo_detail', pk=pk)
+
+
+@login_required
+@require_menu_perm('cavalos')
+def transferir_proprietario_cavalo(request, pk):
+    # Transfere o proprietario do cavalo.
+    if request.method != 'POST':
+        return redirect('core:cavalo_detail', pk=pk)
+    cavalo = get_object_or_404(Cavalo, pk=pk)
+    proprietario_id = request.POST.get('proprietario') or None
+
+    proprietario_anterior_nome = cavalo.proprietario.nome_razao_social if cavalo.proprietario else None
+    cavalo.proprietario_id = proprietario_id if proprietario_id else None
+    cavalo.save()
+
+    proprietario_novo_nome = cavalo.proprietario.nome_razao_social if cavalo.proprietario else None
+    LogCarreta.objects.create(
+        tipo='troca_proprietario',
+        cavalo=cavalo,
+        placa_cavalo=cavalo.placa,
+        proprietario_anterior=proprietario_anterior_nome,
+        proprietario_novo=proprietario_novo_nome,
+        descricao='Proprietario alterado de "%s" para "%s" no cavalo %s.' % (
+            proprietario_anterior_nome or '-', proprietario_novo_nome or '-', cavalo.placa
+        ),
+    )
+
+    messages.success(request, 'Proprietario transferido com sucesso.')
+    return redirect('core:cavalo_detail', pk=pk)
