@@ -16,7 +16,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 DEBUG = os.environ.get('DJANGO_DEBUG') == '1'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
     x.strip() for x in os.environ.get(
@@ -105,7 +105,7 @@ _MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT')
 _MINIO_ACCESS = os.environ.get('MINIO_ACCESS_KEY')
 _MINIO_SECRET = os.environ.get('MINIO_SECRET_KEY')
 _MINIO_BUCKET = os.environ.get('MINIO_BUCKET')
-_MINIO_SSL = os.environ.get('MINIO_USE_SSL')
+_MINIO_SSL = os.environ.get('MINIO_USE_SSL', '0').lower() in ('1', 'true', 'yes')
 
 AWS_ACCESS_KEY_ID = _MINIO_ACCESS
 AWS_SECRET_ACCESS_KEY = _MINIO_SECRET
@@ -189,3 +189,15 @@ GOOGLE_SHEETS_ENABLED = os.environ.get('GOOGLE_SHEETS_ENABLED', '0').lower() in 
 GOOGLE_SHEETS_CREDENTIALS_PATH = os.environ.get('GOOGLE_SHEETS_CREDENTIALS_PATH', '')
 GOOGLE_SHEETS_SPREADSHEET_ID = os.environ.get('GOOGLE_SHEETS_SPREADSHEET_ID', '')
 GOOGLE_SHEETS_WORKSHEET_NAME = os.environ.get('GOOGLE_SHEETS_WORKSHEET_NAME', 'Cavalos')
+
+# Segurança extra em produção (DEBUG=False)
+# SECURE_PROXY_SSL_HEADER: informa ao Django que o Cloudflare/Nginx já terminou o TLS
+# SECURE_SSL_REDIRECT: redireciona HTTP -> HTTPS (Nginx já faz, mas garante a camada Django)
+# SESSION_COOKIE_SECURE / CSRF_COOKIE_SECURE: cookies só trafegam via HTTPS
+# X_FRAME_OPTIONS: protege contra Clickjacking
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    X_FRAME_OPTIONS = 'DENY'
