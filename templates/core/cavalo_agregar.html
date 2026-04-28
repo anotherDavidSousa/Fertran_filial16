@@ -98,8 +98,8 @@
     </div>
 
     <div class="wizard-actions">
-      <button type="submit" class="btn-core btn-core-primary" style="background:#2563eb;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14"/></svg>
+      <button type="submit" class="btn-core btn-core-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><path d="M12 5v14M5 12h14"/></svg>
         Confirmar Agregamento
       </button>
       <a href="{% url 'core:cavalo_detail' cavalo.pk %}" class="btn-core btn-core-secondary">Cancelar</a>
@@ -109,17 +109,35 @@
 
 <style>
 .wizard-fields { display: flex; flex-direction: column; gap: 1.25rem; padding: 1rem 0; }
-.wizard-info-row { display: flex; flex-wrap: wrap; gap: 1rem; background: var(--surface-2, #f1f5f9); border-radius: 8px; padding: .75rem 1rem; }
+.wizard-info-row {
+  display: flex; flex-wrap: wrap; gap: 1rem;
+  background: var(--bg-page); border-radius: 8px;
+  padding: .75rem 1rem; border: 1px solid var(--border);
+}
 .wizard-info-item { display: flex; flex-direction: column; min-width: 120px; }
-.wizard-info-label { font-size: .75rem; font-weight: 600; color: var(--text-muted, #6b7280); text-transform: uppercase; letter-spacing: .04em; }
-.wizard-info-value { font-size: .95rem; font-weight: 500; margin-top: .15rem; }
-.wizard-divider { border: none; border-top: 1px solid var(--border, #e2e8f0); margin: .25rem 0; }
+.wizard-info-label {
+  font-size: .72rem; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.wizard-info-value { font-size: .95rem; font-weight: 500; margin-top: .15rem; color: var(--text-primary); }
+.wizard-divider { border: none; border-top: 1px solid var(--border); margin: .25rem 0; }
 .wizard-field { display: flex; flex-direction: column; gap: .4rem; }
-.wizard-label { font-size: .9rem; font-weight: 600; }
-.wizard-hint { font-size: .8rem; font-weight: 400; color: var(--text-muted, #6b7280); }
-.wizard-select { padding: .5rem .75rem; border-radius: 8px; border: 1px solid var(--border, #dee2e6); font-size: .9rem; background: var(--surface, #fff); color: var(--text, #111); width: 100%; max-width: 480px; }
-.wizard-alert { font-size: .85rem; color: #b45309; background: #fef3c7; border-radius: 6px; padding: .4rem .75rem; margin-top: .25rem; }
-.wizard-note { font-size: .88rem; color: var(--text-muted, #6b7280); font-style: italic; }
+.wizard-label { font-size: .9rem; font-weight: 600; color: var(--text-primary); }
+.wizard-hint { font-size: .8rem; font-weight: 400; color: var(--text-secondary); }
+.wizard-select {
+  padding: .5rem .75rem; border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: .9rem; font-family: inherit;
+  background: var(--bg-page); color: var(--text-primary);
+  width: 100%; max-width: 480px;
+}
+.wizard-alert {
+  font-size: .85rem; color: var(--text-primary);
+  background: var(--accent-muted); border-radius: 6px;
+  padding: .4rem .75rem; margin-top: .25rem;
+  border: 1px solid var(--border);
+}
+.wizard-note { font-size: .88rem; color: var(--text-secondary); font-style: italic; }
 .wizard-actions { display: flex; gap: .75rem; margin-top: 1.5rem; flex-wrap: wrap; align-items: center; }
 </style>
 
