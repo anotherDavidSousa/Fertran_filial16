@@ -25,11 +25,10 @@
             {% if can_see_fila %}
             <div class="nav-group nav-group-fila" id="nav-group-fila">
                 <button type="button" class="nav-group-toggle nav-group-toggle-destaque" aria-expanded="true" aria-controls="nav-group-fila-sub" id="nav-group-fila-btn">
-                    <span class="nav-group-title">Fila de carregamento</span>
+                    <span class="nav-group-title">Carregamentos</span>
                     <span class="nav-group-chevron" aria-hidden="true">▼</span>
                 </button>
                 <div class="nav-group-sub" id="nav-group-fila-sub" role="region" aria-labelledby="nav-group-fila-btn">
-                    <a href="{% url 'fila' %}" class="nav-item nav-sub">Fila <span class="nav-badge" aria-label="{{ total_fila }} notas na fila">{{ total_fila }}</span></a>
                     <a href="{% url 'lista_carregamentos' %}" class="nav-item nav-sub">Lista de Carregamentos</a>
                 </div>
             </div>

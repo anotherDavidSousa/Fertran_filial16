@@ -1,16 +1,7 @@
-from .models import Carregamento
 from .menu_perms import user_menu_permissions
 
 
-def total_fila(request):
-    """Injeta o total de notas na fila (aba geral) para o menu lateral."""
-    return {
-        'total_fila': Carregamento.objects.filter(arquivado=False).count(),
-    }
-
-
 def menu_permissions(request):
-    """Permissões de menu por grupo: administradores veem tudo; Operadores só Fila, Manifestados, Cavalos."""
     if not request.user.is_authenticated:
         return {
             'can_see_home': False,

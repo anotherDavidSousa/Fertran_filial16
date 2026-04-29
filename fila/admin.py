@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ApiKey, Carregamento, OST, CTe
+from .models import ApiKey, OST, CTe
 
 
 @admin.register(ApiKey)
@@ -10,31 +10,11 @@ class ApiKeyAdmin(admin.ModelAdmin):
     search_fields = ('descricao', 'user__username')
 
 
-@admin.register(Carregamento)
-class CarregamentoAdmin(admin.ModelAdmin):
-    list_display = (
-        'nota_fiscal', 'chave_acesso', 'fluxo', 'emit_nome',
-        'peso_display', 'datahora_emissao', 'arquivado', 'criado_em'
-    )
-    list_filter = ('fluxo', 'arquivado')
-    search_fields = ('chave_acesso', 'nota_fiscal', 'emit_nome', 'dest_nome', 'xProd_produto')
-    readonly_fields = ('criado_em', 'atualizado_em')
-    date_hierarchy = 'datahora_emissao'
-
-    def peso_display(self, obj):
-        """Exibe o Peso (qCom) na lista do admin."""
-        if obj.qCom_peso is None:
-            return '—'
-        return obj.qCom_peso
-    peso_display.short_description = 'Peso'
-    peso_display.admin_order_field = 'qCom_peso'
-
-
 @admin.register(OST)
 class OSTAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'filial', 'serie', 'documento', 'data_hora_manifesto_display',
-        'remetente', 'destinatario', 'nota_fiscal', 'chave_acesso', 'tem_carregamento', 'tem_pdf', 'criado_em',
+        'remetente', 'destinatario', 'nota_fiscal', 'chave_acesso', 'tem_pdf', 'criado_em',
     )
     list_filter = ('data_manifesto', 'criado_em')
     search_fields = (
@@ -46,7 +26,6 @@ class OSTAdmin(admin.ModelAdmin):
     list_per_page = 50
 
     def get_search_results(self, request, queryset, search_term):
-        """Inclui busca por número da nota fiscal (campo JSON lista)."""
         queryset, use_distinct = super().get_search_results(request, queryset, search_term)
         term = (search_term or '').strip()
         if term:
@@ -69,11 +48,6 @@ class OSTAdmin(admin.ModelAdmin):
             return s
         return '—'
     data_hora_manifesto_display.short_description = 'Data/hora manifesto'
-
-    def tem_carregamento(self, obj):
-        return obj.carregamentos.exists()
-    tem_carregamento.boolean = True
-    tem_carregamento.short_description = 'Vinculado'
 
     def tem_pdf(self, obj):
         return bool(obj.pdf_storage_key)

@@ -26,151 +26,41 @@
 <section class="dashboard-cards">
     <div class="card-summary card-total card-centered">
         <span class="card-value">{{ total_periodo }}</span>
-        <span class="card-sublabel">notas do período selecionado</span>
+        <span class="card-sublabel">documentos no período</span>
     </div>
-    <div class="card-summary card-archived card-centered">
-        <span class="card-value card-value-success">{{ total_manifestados_periodo }}</span>
-        <span class="card-sublabel">Manifestados no período</span>
+    <div class="card-summary card-centered">
+        <span class="card-value">{{ total_osts_periodo }}</span>
+        <span class="card-sublabel">OSTs no período</span>
     </div>
-    <div class="card-summary card-peso card-centered">
-        <span class="card-value">{{ soma_peso_formatado }}</span>
-        <span class="card-sublabel">Peso total do período</span>
+    <div class="card-summary card-centered">
+        <span class="card-value">{{ total_ctes_periodo }}</span>
+        <span class="card-sublabel">CT-es no período</span>
     </div>
 </section>
 
-<div class="dashboard-charts">
-    <div class="chart-card">
-        <h2>Distribuição por fluxo</h2>
-        <div class="chart-wrap">
-            <canvas id="chartFluxos" width="400" height="300"></canvas>
-        </div>
+<section class="dashboard-cards" style="margin-top:.5rem;">
+    <div class="card-summary card-centered">
+        <span class="card-value card-value-success">{{ osts_com_pdf }}</span>
+        <span class="card-sublabel">OSTs com PDF no período</span>
     </div>
-    <div class="chart-card">
-        <h2>Peso por fluxo</h2>
-        <div class="chart-wrap">
-            <canvas id="chartPesoFluxo" width="400" height="280"></canvas>
-        </div>
-        {% if not peso_por_fluxo %}
-        <p class="empty-state">Nenhum peso no período por fluxo.</p>
-        {% endif %}
+    <div class="card-summary card-centered">
+        <span class="card-value card-value-success">{{ ctes_com_pdf }}</span>
+        <span class="card-sublabel">CT-es com PDF no período</span>
     </div>
+    <div class="card-summary card-centered">
+        <span class="card-value">{{ total_osts }}</span>
+        <span class="card-sublabel">Total OSTs cadastradas</span>
+    </div>
+    <div class="card-summary card-centered">
+        <span class="card-value">{{ total_ctes }}</span>
+        <span class="card-sublabel">Total CT-es cadastrados</span>
+    </div>
+</section>
+
+<div style="margin-top:2rem;text-align:center;">
+    <a href="{% url 'lista_carregamentos' %}" class="btn btn-primary" style="font-size:1rem;padding:.6rem 1.5rem;">
+        Ver Lista de Carregamentos
+    </a>
 </div>
 
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.dashboard-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-.filter-group label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
-}
-.filter-group input[type="date"] {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-page);
-  color: var(--text-primary);
-  font: inherit;
-}
-.filter-actions { display: flex; gap: 0.5rem; }
-.btn { padding: 0.5rem 1rem; border-radius: 8px; font: inherit; cursor: pointer; text-decoration: none; display: inline-block; border: 1px solid transparent; }
-.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-secondary { background: var(--bg-page); color: var(--text-primary); border-color: var(--border); }
-.btn-secondary:hover { background: var(--accent-muted); }
-.dashboard-cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
-.dashboard-cards .card-summary { min-width: 140px; }
-.card-centered {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-width: 180px;
-  padding: 1.25rem 1rem;
-}
-.card-value { font-size: 2.25rem; font-weight: 700; color: var(--accent); line-height: 1; }
-.card-value-success { color: var(--success); }
-.card-sublabel { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; display: block; }
-.dashboard-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-@media (max-width: 900px) { .dashboard-charts { grid-template-columns: 1fr; } }
-.chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
-.chart-card h2 { margin: 0 0 0.75rem 0; font-size: 1.1rem; }
-.chart-wrap { position: relative; height: 280px; }
-.chart-wrap canvas { max-width: 100%; }
-.empty-state { color: var(--text-secondary); font-size: 0.9rem; margin: 0.5rem 0 0 0; }
-.page-hero-home { text-align: center; margin-bottom: 1.5rem; }
-.home-hero-logo { width: 320px; max-width: 100%; max-height: 120px; height: auto; object-fit: contain; }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-(function() {
-  var pieData = {{ pie_fluxos_json|safe }};
-
-  var cores = ['#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-  function cor(i) { return cores[i % cores.length]; }
-
-  if (document.getElementById('chartFluxos') && pieData.length) {
-    new Chart(document.getElementById('chartFluxos'), {
-      type: 'pie',
-      data: {
-        labels: pieData.map(function(x) { return x.label; }),
-        datasets: [{
-          data: pieData.map(function(x) { return x.total; }),
-          backgroundColor: pieData.map(function(_, i) { return cor(i); }),
-          borderColor: 'var(--bg-card)',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'right' } }
-      }
-    });
-  }
-
-  var pesoPorFluxo = {{ peso_por_fluxo_json|safe }};
-  if (document.getElementById('chartPesoFluxo') && pesoPorFluxo.length) {
-    new Chart(document.getElementById('chartPesoFluxo'), {
-      type: 'bar',
-      data: {
-        labels: pesoPorFluxo.map(function(x) { return x.label; }),
-        datasets: [{
-          label: 'Peso',
-          data: pesoPorFluxo.map(function(x) { return x.peso; }),
-          backgroundColor: pesoPorFluxo.map(function(_, i) { return cor(i); }),
-          borderWidth: 1
-        }]
-      },
-      options: {
-        indexAxis: 'x',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'Peso' } },
-          x: { title: { display: true, text: 'Fluxo' } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
-})();
-</script>
 {% endblock %}
