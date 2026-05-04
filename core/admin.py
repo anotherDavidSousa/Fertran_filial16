@@ -32,6 +32,12 @@ class GestorAdmin(admin.ModelAdmin):
     list_display = ('nome', 'meta_faturamento')
 
 
+_UFS_BR = {
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+    'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+}
+
+
 class CavaloDocumentoInline(admin.TabularInline):
     model = CavaloDocumento
     extra = 1
@@ -81,8 +87,17 @@ def _cavalos_queryset_ordenado(queryset, filtrar_apenas_com_carreta=False):
 class CavaloAdmin(admin.ModelAdmin):
     list_display = ('placa', 'tipo', 'classificacao', 'situacao', 'proprietario', 'gestor', 'carreta', 'emissao_laudo')
     list_filter = ('tipo', 'classificacao', 'situacao', 'fluxo')
-    search_fields = ('placa',)
+    search_fields = ('placa', 'motorista__nome', 'carreta__placa')
     inlines = [CavaloDocumentoInline]
+
+    def get_search_results(self, request, queryset, search_term):
+        import re
+        # Remove caracteres não alfanuméricos (parênteses, traços extras, etc.) exceto espaço
+        cleaned = re.sub(r'[^\w\s]', ' ', search_term).strip()
+        # Remove tokens que sejam exatamente uma UF (ex: "ESU5J71 SP" → "ESU5J71")
+        tokens = [t for t in cleaned.upper().split() if t not in _UFS_BR]
+        normalized = ' '.join(tokens) if tokens else cleaned
+        return super().get_search_results(request, queryset, normalized)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).select_related('motorista', 'carreta', 'gestor')
@@ -100,6 +115,13 @@ class CarretaAdmin(admin.ModelAdmin):
     list_display = ('placa', 'marca', 'modelo', 'classificacao', 'situacao', 'emissao_laudo')
     list_filter = ('classificacao', 'situacao')
     search_fields = ('placa',)
+
+    def get_search_results(self, request, queryset, search_term):
+        import re
+        cleaned = re.sub(r'[^\w\s]', ' ', search_term).strip()
+        tokens = [t for t in cleaned.upper().split() if t not in _UFS_BR]
+        normalized = ' '.join(tokens) if tokens else cleaned
+        return super().get_search_results(request, queryset, normalized)
 
 
 class MotoristaDocumentoInline(admin.TabularInline):
