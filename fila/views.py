@@ -1,6 +1,6 @@
 import json
 from django.contrib.auth import logout
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
 from django.core.files.storage import default_storage
@@ -34,55 +34,7 @@ def _parse_date(s):
 
 @login_required
 def home_view(request):
-    hoje = timezone.localdate()
-    data_inicio = _parse_date(request.GET.get('data_inicio')) or hoje
-    data_fim = _parse_date(request.GET.get('data_fim')) or hoje
-    if data_fim < data_inicio:
-        data_fim = data_inicio
-
-    # OSTs no periodo
-    qs_ost = OST.objects.filter(
-        Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt='')
-    )
-    qs_ost_periodo = qs_ost.filter(
-        Q(data_manifesto__gte=data_inicio, data_manifesto__lte=data_fim) |
-        Q(data_manifesto__isnull=True, criado_em__date__gte=data_inicio, criado_em__date__lte=data_fim)
-    )
-
-    # CTes no periodo
-    qs_cte = CTe.objects.filter(
-        Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt='')
-    )
-    qs_cte_periodo = qs_cte.filter(
-        Q(data_emissao__gte=data_inicio, data_emissao__lte=data_fim) |
-        Q(data_emissao__isnull=True, criado_em__date__gte=data_inicio, criado_em__date__lte=data_fim)
-    )
-
-    total_osts_periodo = qs_ost_periodo.count()
-    total_ctes_periodo = qs_cte_periodo.count()
-    total_periodo = total_osts_periodo + total_ctes_periodo
-
-    # Totais gerais
-    total_osts = qs_ost.count()
-    total_ctes = qs_cte.count()
-
-    # OSTs com PDF no periodo
-    osts_com_pdf = qs_ost_periodo.exclude(pdf_storage_key='').count()
-    ctes_com_pdf = qs_cte_periodo.exclude(pdf_storage_key='').count()
-
-    context = {
-        'data_inicio': data_inicio.isoformat(),
-        'data_fim': data_fim.isoformat(),
-        'hoje': hoje.isoformat(),
-        'total_periodo': total_periodo,
-        'total_osts_periodo': total_osts_periodo,
-        'total_ctes_periodo': total_ctes_periodo,
-        'total_osts': total_osts,
-        'total_ctes': total_ctes,
-        'osts_com_pdf': osts_com_pdf,
-        'ctes_com_pdf': ctes_com_pdf,
-    }
-    return render(request, 'fila/home.html', context)
+    return redirect('core:cavalo_list')
 
 
 # ── Lista de Carregamentos (OST + CTe) ────────────────────────────────────────
@@ -161,67 +113,74 @@ def lista_carregamentos_view(request):
     nota_fiscal_raw = (request.GET.get('nota_fiscal') or '').strip()
     notas_fiscais = [x.strip() for x in nota_fiscal_raw.split(',') if x.strip()]
 
-    qs_ost = OST.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt=''))
-    if data_inicio:
-        qs_ost = qs_ost.filter(Q(data_manifesto__gte=data_inicio) | Q(data_manifesto__isnull=True, criado_em__date__gte=data_inicio))
-    if data_fim:
-        qs_ost = qs_ost.filter(Q(data_manifesto__lte=data_fim) | Q(data_manifesto__isnull=True, criado_em__date__lte=data_fim))
-    if motorista:
-        qs_ost = qs_ost.filter(motorista__icontains=motorista)
-    if placa:
-        qs_ost = qs_ost.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
-    if remetente:
-        qs_ost = qs_ost.filter(remetente__icontains=remetente)
-    if destinatario:
-        qs_ost = qs_ost.filter(destinatario__icontains=destinatario)
-    if notas_fiscais:
-        q_nf = Q()
-        for nf in notas_fiscais:
-            q_nf |= Q(nota_fiscal__contains=[nf])
-            try:
-                q_nf |= Q(nota_fiscal__contains=[int(nf)])
-            except ValueError:
-                pass
-        qs_ost = qs_ost.filter(q_nf)
+    # Só executa as queries se pelo menos um filtro estiver ativo
+    filtro_ativo = bool(data_inicio or data_fim or motorista or placa or remetente or destinatario or notas_fiscais)
 
-    qs_cte = CTe.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt=''))
-    if data_inicio:
-        qs_cte = qs_cte.filter(Q(data_emissao__gte=data_inicio) | Q(data_emissao__isnull=True, criado_em__date__gte=data_inicio))
-    if data_fim:
-        qs_cte = qs_cte.filter(Q(data_emissao__lte=data_fim) | Q(data_emissao__isnull=True, criado_em__date__lte=data_fim))
-    if motorista:
-        qs_cte = qs_cte.filter(motorista__icontains=motorista)
-    if placa:
-        qs_cte = qs_cte.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
-    if remetente:
-        qs_cte = qs_cte.filter(remetente__icontains=remetente)
-    if destinatario:
-        qs_cte = qs_cte.filter(destinatario__icontains=destinatario)
-    if notas_fiscais:
-        q_nf_cte = Q()
-        for nf in notas_fiscais:
-            q_nf_cte |= Q(nota_fiscal__icontains=nf)
-        qs_cte = qs_cte.filter(q_nf_cte)
+    if filtro_ativo:
+        qs_ost = OST.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt=''))
+        if data_inicio:
+            qs_ost = qs_ost.filter(Q(data_manifesto__gte=data_inicio) | Q(data_manifesto__isnull=True, criado_em__date__gte=data_inicio))
+        if data_fim:
+            qs_ost = qs_ost.filter(Q(data_manifesto__lte=data_fim) | Q(data_manifesto__isnull=True, criado_em__date__lte=data_fim))
+        if motorista:
+            qs_ost = qs_ost.filter(motorista__icontains=motorista)
+        if placa:
+            qs_ost = qs_ost.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
+        if remetente:
+            qs_ost = qs_ost.filter(remetente__icontains=remetente)
+        if destinatario:
+            qs_ost = qs_ost.filter(destinatario__icontains=destinatario)
+        if notas_fiscais:
+            q_nf = Q()
+            for nf in notas_fiscais:
+                q_nf |= Q(nota_fiscal__contains=[nf])
+                try:
+                    q_nf |= Q(nota_fiscal__contains=[int(nf)])
+                except ValueError:
+                    pass
+            qs_ost = qs_ost.filter(q_nf)
 
-    itens_raw = [_lista_carregamentos_item_ost(o) for o in qs_ost]
-    itens_raw += [_lista_carregamentos_item_cte(c) for c in qs_cte]
+        qs_cte = CTe.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt=''))
+        if data_inicio:
+            qs_cte = qs_cte.filter(Q(data_emissao__gte=data_inicio) | Q(data_emissao__isnull=True, criado_em__date__gte=data_inicio))
+        if data_fim:
+            qs_cte = qs_cte.filter(Q(data_emissao__lte=data_fim) | Q(data_emissao__isnull=True, criado_em__date__lte=data_fim))
+        if motorista:
+            qs_cte = qs_cte.filter(motorista__icontains=motorista)
+        if placa:
+            qs_cte = qs_cte.filter(Q(placa_cavalo__icontains=placa) | Q(placa_carreta__icontains=placa))
+        if remetente:
+            qs_cte = qs_cte.filter(remetente__icontains=remetente)
+        if destinatario:
+            qs_cte = qs_cte.filter(destinatario__icontains=destinatario)
+        if notas_fiscais:
+            q_nf_cte = Q()
+            for nf in notas_fiscais:
+                q_nf_cte |= Q(nota_fiscal__icontains=nf)
+            qs_cte = qs_cte.filter(q_nf_cte)
 
-    def _sort_key(x):
-        d, t = x['sort_key']
-        if d is None:
-            return (1, 0, 0)
-        secs = (t.hour * 3600 + t.minute * 60 + t.second) if t else 0
-        return (0, -d.toordinal(), -secs)
+        itens_raw = [_lista_carregamentos_item_ost(o) for o in qs_ost]
+        itens_raw += [_lista_carregamentos_item_cte(c) for c in qs_cte]
 
-    itens = sorted(itens_raw, key=_sort_key)
-    for d in itens:
-        d.pop('sort_key', None)
+        def _sort_key(x):
+            d, t = x['sort_key']
+            if d is None:
+                return (1, 0, 0)
+            secs = (t.hour * 3600 + t.minute * 60 + t.second) if t else 0
+            return (0, -d.toordinal(), -secs)
+
+        itens = sorted(itens_raw, key=_sort_key)
+        for d in itens:
+            d.pop('sort_key', None)
+    else:
+        itens = []
 
     total_osts = OST.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(documento__gt='')).count()
     total_ctes = CTe.objects.filter(Q(filial__gt='') | Q(serie__gt='') | Q(numero_cte__gt='')).count()
 
     context = {
         'itens': itens,
+        'filtro_ativo': filtro_ativo,
         'total_osts': total_osts,
         'total_ctes': total_ctes,
         'total_filtrado': len(itens),

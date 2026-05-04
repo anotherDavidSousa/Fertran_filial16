@@ -16,23 +16,11 @@
         </a>
         <nav class="sidebar-nav">
             <div class="nav-item-row nav-item-row-home">
-                {% if can_see_home %}<a href="{% url 'home' %}" class="nav-item">Home</a>{% endif %}
                 <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema (claro/escuro)">
                     <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
                     <span class="theme-icon theme-icon-moon" aria-hidden="true">🌙</span>
                 </button>
             </div>
-            {% if can_see_fila %}
-            <div class="nav-group nav-group-fila" id="nav-group-fila">
-                <button type="button" class="nav-group-toggle nav-group-toggle-destaque" aria-expanded="true" aria-controls="nav-group-fila-sub" id="nav-group-fila-btn">
-                    <span class="nav-group-title">Carregamentos</span>
-                    <span class="nav-group-chevron" aria-hidden="true">▼</span>
-                </button>
-                <div class="nav-group-sub" id="nav-group-fila-sub" role="region" aria-labelledby="nav-group-fila-btn">
-                    <a href="{% url 'lista_carregamentos' %}" class="nav-item nav-sub">Lista de Carregamentos</a>
-                </div>
-            </div>
-            {% endif %}
             {% if can_see_cavalos or can_see_agregamento %}
             <div class="nav-group nav-group-veiculos" id="nav-group-veiculos">
                 <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-veiculos-sub" id="nav-group-veiculos-btn">
@@ -64,7 +52,7 @@
             </div>
             {% endif %}
 
-            {% if can_see_processador or can_see_agregamento %}
+            {% if can_see_processador or can_see_agregamento or can_see_fila %}
             <div class="nav-group nav-group-ferramentas" id="nav-group-ferramentas">
                 <button type="button" class="nav-group-toggle" aria-expanded="true" aria-controls="nav-group-ferramentas-sub" id="nav-group-ferramentas-btn">
                     <span class="nav-group-title">Ferramentas</span>
@@ -72,6 +60,7 @@
                 </button>
                 <div class="nav-group-sub" id="nav-group-ferramentas-sub" role="region" aria-labelledby="nav-group-ferramentas-btn">
                     {% if can_see_agregamento %}<a href="{% url 'core:index' %}" class="nav-item nav-sub">Dashboard</a>{% endif %}
+                    {% if can_see_fila %}<a href="{% url 'lista_carregamentos' %}" class="nav-item nav-sub">Lista de Carregamentos</a>{% endif %}
                     {% if can_see_processador %}<a href="{% url 'processador' %}" class="nav-item nav-sub">Processador de PDFs</a>{% endif %}
                     {% if can_see_agregamento %}<a href="{% url 'core:log_list' %}" class="nav-item nav-sub">Logs</a>{% endif %}
                 </div>

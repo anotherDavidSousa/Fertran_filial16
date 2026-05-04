@@ -62,10 +62,12 @@
         <span class="label">Total CT-es</span>
         <span class="value">{{ total_ctes }}</span>
     </div>
+    {% if filtro_ativo %}
     <div class="card-summary card-filtrado">
-        <span class="label">Exibindo</span>
+        <span class="label">Resultado</span>
         <span class="value">{{ total_filtrado }}</span>
     </div>
+    {% endif %}
 </div>
 
 <div class="panel-detail" style="margin-bottom: 1rem;">
@@ -105,7 +107,14 @@
 </div>
 
 <div class="core-table-wrap">
-{% include "fila/partials/tabela_lista_carregamentos.html" %}
+{% if filtro_ativo %}
+  {% include "fila/partials/tabela_lista_carregamentos.html" %}
+{% else %}
+  <div style="padding: 2.5rem 1.5rem; text-align: center; color: var(--text-secondary);">
+    <p style="font-size: 1.1rem; margin-bottom: 0.4rem;">Use os filtros acima para pesquisar viagens.</p>
+    <p style="font-size: 0.88rem;">Informe pelo menos um critério (período, motorista, placa, etc.) e clique em <strong>Filtrar</strong>.</p>
+  </div>
+{% endif %}
 </div>
 {% endblock %}
 
